@@ -14,6 +14,9 @@ var vel = new Array();
 var k_brane = 0.4;
 var interval = 30; // drawing interval pixels
 
+var rainThreshold = 0.1;
+
+
 
 // Initialize
 window.addEventListener("load", init, false);
@@ -33,7 +36,14 @@ init()
 	}
 	timeClock = setInterval(loop, 25);
 	// Random impulse
-	setInterval(function () { brane[Math.floor(33 * Math.random()) * braneSize.width + Math.floor(33 * Math.random())] = 256.0 * Math.random(); }, 1000);
+	setInterval(function ()
+	    {
+		    var f = Math.random();
+		    if (f < rainThreshold) {
+			    brane[Math.floor(33 * Math.random()) * braneSize.width + Math.floor(33 * Math.random())] = 200.0 * f;
+			    rainThreshold += rainThreshold < 1.0 ? 0.001 : 0.0;
+		    }
+	    }, 50);
 
 	canvas = document.getElementById("mainPool");
 	context = canvas.getContext("2d");
