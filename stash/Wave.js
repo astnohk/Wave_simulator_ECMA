@@ -95,7 +95,7 @@ draw()
 	for (var i = 1; i < braneSize.height; i++) {
 		context.beginPath();
 		context.strokeStyle = 'blue';
-		context.moveTo(10, i * interval);
+		context.moveTo(10, i * interval + brane[i * braneSize.width + j]);
 		for (var j = 1; j < braneSize.width; j++) {
 			context.lineTo(10 + j * interval, i * interval + brane[i * braneSize.width + j]);
 		}
