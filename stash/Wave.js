@@ -31,9 +31,9 @@ init()
 			vel[i * braneSize.width + j] = 0.0;
 		}
 	}
-	brane[16 * braneSize.width + 16] = 40.0;
 	timeClock = setInterval(loop, 25);
-	setInterval(function () { brane[16 * braneSize.width + 16] = 90.0; }, 3000);
+	// Random impulse
+	setInterval(function () { brane[Math.floor(33 * Math.random()) * braneSize.width + Math.floor(33 * Math.random())] = 256.0 * Math.random(); }, 1000);
 
 	canvas = document.getElementById("mainPool");
 	context = canvas.getContext("2d");
