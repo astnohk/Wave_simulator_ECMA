@@ -1,2 +1,2 @@
-# Wave_simulator_ECMA
-Simple wave simulation with ECMAScript 6
+# ECMASystem6
+The simple window system with HTML+CSS+ECMAScript6

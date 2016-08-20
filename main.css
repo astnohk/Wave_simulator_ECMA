@@ -1,0 +1,521 @@
+html, body, div, span, pre, code, table, tbody, tr, th, td, form, input, textarea, label, select, canvas {
+	-webkit-appearance: none; /* Reset default style of iOS Safari. It may be deprecated. */
+	box-sizing: border-box;
+	margin: 0;
+	border: 0;
+	padding: 0;
+	font-size: 20px;
+	line-height: 1.1;
+	outline: 0;
+	vertical-align: baseline;
+	background: transparent;
+}
+html, body {
+	width: 100%;
+	height: 100%;
+}
+body {
+	background-color: rgb(0, 0, 0);
+	transition-property: background-color;
+	transition-duration: 16s;
+	transition-timing-function: linear;
+}
+span, form, label {
+	display: inline-block;
+}
+input, select {
+	vertical-align: middle;
+}
+textarea {
+	margin-left: 4px;
+	margin-right: 4px;
+	min-height: 24px;
+	padding: 4px;
+	font-size: 16px;
+	outline-style: solid;
+	outline-color: #A0A000;
+	outline-width: 1px;
+	background-color: #FFFFE0;
+}
+input[type="text"], input[type="password"] {
+	margin-left: 4px;
+	margin-right: 4px;
+	height: 24px;
+	padding: 4px;
+	font-size: 16px;
+	outline-style: solid;
+	outline-color: #A0A000;
+	outline-width: 1px;
+	background-color: #FFFFE0;
+}
+input[type="text"][disabled] {
+	color: #000000;
+	background-color: #CCCCB0;
+	cursor: default;
+}
+input[type="submit"] {
+	margin-top: -2px;
+	margin-left: 4px;
+	margin-right: 4px;
+	height: 24px;
+	border-style: ridge;
+	border-width: 3px;
+	border-color: #6060FF;
+	padding: 0px 2px;
+	font-size: 16px;
+	background-color: #E0FFFF;
+}
+input[type="button"] {
+	margin-top: -2px;
+	margin-left: 4px;
+	margin-right: 4px;
+	height: 24px;
+	border-style: ridge;
+	border-width: 3px;
+	border-color: #6060FF;
+	padding: 0px 2px;
+	font-size: 16px;
+	background-color: #E0FFFF;
+}
+input[type="button"]:active {
+	border-style: groove;
+	border-color: #2020B0;
+	background-color: #90B0B0;
+}
+
+input[type="radio"] {
+	display: none;
+}
+input[type="radio"] + label {
+	display: inline-block;
+	margin-left: 2px;
+	margin-right: 2px;
+	height: 24px;
+	border-style: ridge;
+	border-width: 3px;
+	border-color: rgba(32, 32, 32, 1.0);
+	border-radius: 6px;
+	padding: 0px 2px;
+	font-size: 16px;
+	color: #000000;
+	background-color: rgba(255, 255, 255, 1.0);
+}
+input[type="radio"]:checked + label {
+	border-style: groove;
+	border-color: #F0F0F0;
+	color: #F8F8F8;
+	background-color: rgba(0, 0, 0, 1.0);
+}
+/* For To-Do Tabs */
+input[type="radio"].ToDoGroupRadioButton + label {
+	display: flex;
+	align-items: center;
+	height: 100%;
+	border-bottom: 0;
+	border-color: rgba(240, 240, 240, 0.9);
+	border-radius: 0;
+	color: rgb(248, 248, 248);
+	background-color: rgba(0, 0, 0, 0.8);
+}
+input[type="radio"].ToDoGroupRadioButton:checked + label {
+	border-color: rgba(240, 240, 240, 0.9);
+	background-color: rgba(160, 0, 0, 0.8);
+}
+
+input[type="checkbox"] {
+	display: none;
+}
+input[type="checkbox"] + label {
+	display: inline-block;
+	margin-left: 2px;
+	margin-right: 2px;
+	height: 24px;
+	border-style: ridge;
+	border-width: 3px;
+	border-color: #202020;
+	border-radius: 6px;
+	padding: 0px 2px;
+	font-size: 16px;
+	color: #000000;
+	background-color: #FFFFFF;
+}
+input[type="checkbox"]:checked + label {
+	border-style: groove;
+	border-color: #F0F0F0;
+	color: #F8F8F8;
+	background-color: #303030;
+}
+/* ToolBox buttons */
+input[type="button"].classButtonToolBox {
+	margin-left: 4px;
+	margin-right: 4px;
+	height: 28px;
+	font-size: 20px;
+}
+
+#ClockBox {
+	position: absolute;
+	top: 12px;
+	left: 30px;
+	height: 28px;
+	padding: 4px;
+	font-size: 20px;
+	font-weight: bold;
+	outline-style: solid;
+	outline-width: 2px;
+	outline-color: rgba(96, 96, 96, 0.8);
+	color: rgb(240, 240, 240);
+	background-color: rgba(20, 20, 20, 0.8);
+	cursor: default;
+}
+#UpperRightMenu {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	flex-wrap: nowrap;
+	z-index: 100;
+	position: fixed;
+	top: 0px;
+	right: 0px;
+}
+.MenuBar {
+	display: flex;
+	justify-content: flex-end;
+	flex-wrap: nowrap;
+}
+.MenuDropdown {
+	display: flex;
+	flex-wrap: nowrap;
+}
+#MySettingsMenu {
+	margin: 2px;
+	margin-top: 4px;
+	border-style: solid;
+	border-width: 4px;
+	border-color: rgba(0, 0, 0, 0.8);
+	white-space: nowrap;
+	background-color: rgba(255, 255, 255, 0.5);
+}
+.classMySettingsMenu {
+	margin: 2px;
+	border-style: solid;
+	border-width: 1px;
+	border-color: rgba(25, 25, 60, 0.8);
+	padding-left: 2px;
+	padding-right: 2px;
+	font-size: 16px;
+	color: rgba(0, 0, 0, 1.0);
+	background-color: rgba(255, 255, 255, 0.8);
+	white-space: nowrap;
+	cursor: pointer;
+}
+#ToolBox {
+	display: flex;
+	align-items: center;
+	flex-wrap: nowrap;
+	position: absolute;
+	top: 54px;
+	left: 30px;
+	background-color: rgba(0, 0, 0, 0.0);
+	white-space: nowrap;
+}
+#ToolForm {
+	display: flex;
+	justify-content: space-around;
+	align-items: center;
+	flex-wrap: nowrap;
+	height: 40px;
+	outline-color: rgba(128, 0, 0, 0.8);
+	outline-style: solid;
+	outline-width: 2px;
+	color: rgb(240, 240, 240);
+	background-color: rgba(64, 32, 24, 0.5);
+	white-space: nowrap;
+}
+@keyframes popupLoginVariance {
+	0% {opacity: 0.0; left: 35%;}
+	100% {opacity: 1.0; left: 40%;}
+}
+#LoginOverlay {
+	z-index: 99;
+	position: fixed;
+	top: 0;
+	left: 0;
+	height: 100%;
+	width: 100%;
+	background-color: rgba(0, 0, 20, 0.9);
+	animation-name: popupOpacityVariance;
+	animation-duration: 1.6s;
+	animation-timing-function: linear;
+	animation-iteration-count: 1;
+	animation-direction: normal;
+}
+#LoginBox {
+	z-index: 100;
+	position: absolute;
+	top: 40%;
+	left: 40%;
+	height: 140px;
+	width: 290px;
+	padding: 7px;
+	outline-style: solid;
+	outline-width: 8px;
+	outline-color: #0080D0;
+	background-color: rgba(200, 255, 255, 0.8);
+	animation-name: popupLoginVariance;
+	animation-duration: 1.2s;
+	animation-timing-function: ease-out;
+	animation-iteration-count: 1;
+	animation-direction: normal;
+}
+#ScheduleOnCalendarBox {
+	position: absolute;
+	top: 20px;
+	left: 590px;
+	height: 530px;
+	width: 300px;
+	border-style: ridge;
+	border-width: 2px;
+	border-color: #000000;
+	border-radius: 2px;
+	padding: 4px;
+	font-size: 20px;
+	color: #F0F0F0;
+	background-color: rgba(0, 0, 0, 0.9);
+}
+.tableCalendar {
+	table-layout: fixed;
+	position: relative;
+	width: 560px;
+	border-collapse: collapse;
+	color: #000000;
+}
+th {
+	position: relative;
+	height: 25px;
+	border-collapse: collapse;
+	border-top: 1px solid #0040F0;
+	border-right: 1px solid #0040F0;
+	border-bottom: 1px solid #0040F0;
+	border-left: 1px solid #0040F0;
+	background-color: rgba(250, 250, 250, 0.96);
+}
+th.tableCalendar {
+	position: relative;
+	height: 25px;
+	border-collapse: collapse;
+	border-top: 1px solid #0040F0;
+	border-right: 1px solid #0040F0;
+	border-bottom: 1px solid #0040F0;
+	border-left: 1px solid #0040F0;
+	background-color: rgba(255, 255, 255, 0.96);
+}
+td.tableCalendar {
+	position: relative;
+	height: 80px;
+	border-collapse: collapse;
+	border-top: 1px solid #000000;
+	border-right: 1px solid #000000;
+	border-bottom: 1px solid #000000;
+	border-left: 1px solid #000000;
+	vertical-align: top;
+	text-align: left;
+	background-color: rgba(210, 255, 255, 0.96);
+}
+.todayMarkOnCalendar {
+	height: 28px;
+	width: 28px;
+	border-style: solid;
+	border-width: 2px;
+	border-color: #FF4040;
+	border-radius: 14px;
+}
+.scheduleMarkOnCalendar {
+	position: absolute;
+	right: 15px;
+	bottom: 15px;
+	height: 22px;
+	width: 22px;
+	border-style: solid;
+	border-width: 1px;
+	border-color: #FF0000;
+	border-radius: 12px;
+	background-color: #D00000;
+	cursor: default;
+}
+.ToDoList {
+	position: absolute;
+	left: 5px;
+	width: 770px;
+	padding: 2px;
+	outline-style: solid;
+	outline-width: 1px;
+	outline-color: rgba(240, 240, 240, 0.5);
+	background-color: rgba(20, 20, 20, 0.8);
+	white-space: nowrap;
+	overflow: hidden;
+	cursor: pointer;
+	transition-property: top;
+	transition-duration: 0.3s;
+	transition-timing-function: ease;
+}
+.ToDoState, .ToDoTODO, .ToDoDOING, .ToDoDONE {
+	position: absolute;
+	right: 0;
+	width: 75px;
+	background-color: rgba(0, 0, 0, 0.0);
+	white-space: nowrap;
+	cursor: pointer;
+	transition-property: color;
+	transition-duration: 0.2s;
+	transition-timing-function: ease;
+}
+@keyframes lightingAnimation {
+	0% {background: linear-gradient(90deg, rgba(0, 0, 0, 0.0), rgba(20, 20, 20, 0.6) 10%, rgba(255, 255, 255, 0.6) 50%, rgba(20, 20, 20, 0.6) 90%, rgba(0, 0, 0, 0.0));}
+	50% {background: linear-gradient(90deg, rgba(0, 0, 0, 0.0), rgba(23, 23, 23, 0.6) 10%, rgba(250, 250, 250, 0.6) 50.3%, rgba(23, 23, 23, 0.6) 90%, rgba(0, 0, 0, 0.0));}
+	100% {background: linear-gradient(90deg, rgba(0, 0, 0, 0.0), rgba(20, 20, 20, 0.6) 10%, rgba(255, 255, 255, 0.6) 49.7%, rgba(20, 20, 20, 0.6) 90%, rgba(0, 0, 0, 0.0));}
+}
+.lightingToDoList {
+	position: absolute;
+	top: 0px;
+	background: linear-gradient(90deg, rgba(0, 0, 0, 0.0), rgba(20, 20, 20, 0.6) 10%, rgba(255, 255, 255, 0.6) 50%, rgba(20, 20, 20, 0.6) 90%, rgba(0, 0, 0, 0.0));
+	animation-name: lightingAnimation;
+	animation-duration: 0.4s;
+	animation-timing-function: ease;
+	animation-iteration-count: infinite;
+	animation-direction: normal;
+}
+.PopupNoteOnPopupToDo {
+	position: absolute;
+	left: 140px;
+	min-width: 100px;
+	padding: 4px;
+	padding-bottom: 36px;
+	font-size: 20px;
+	color: #F0F0F0;
+	background-color: rgba(0, 0, 0, 0.9);
+	border-style: ridge;
+	border-width: 5px;
+	border-color: rgba(240, 240, 240, 0.5);
+}
+@keyframes popupOpacityVariance {
+	0% {opacity: 0.0;}
+	100% {opacity: 0.95;}
+}
+.classWindow {
+	box-sizing: content-box;
+	z-index: 10;
+	position: absolute;
+	position: absolute;
+	top: 10%;
+	left: 10%;
+	min-height: 40px;
+	min-width: 100px;
+	border-style: solid;
+	border-width: 7px;
+	border-color: rgba(168, 0, 0, 0.8);
+	border-top-left-radius: 16px;
+	border-top-right-radius: 16px;
+	padding: 10px;
+	padding-bottom: 32px;
+	font-size: 20px;
+	color: rgb(240, 240, 240);
+	background-color: rgba(64, 32, 24, 0.5);
+	animation-name: popupOpacityVariance;
+	animation-duration: 0.3s;
+	animation-timing-function: linear;
+	animation-iteration-count: 1;
+	animation-direction: normal;
+}
+.classWindowTitle {
+	position: absolute;
+	bottom: 0px;
+	left: 0px;
+	height: 28px;
+	padding: 4px;
+	font-size: 20px;
+	font-weight: bold;
+	color: #800080;
+	background-color: rgba(255, 255, 240, 0.9);
+	cursor: default;
+}
+.classWindowResizer {
+	position: absolute;
+	bottom: -20px;
+	right: -20px;
+	height: 20px;
+	width: 20px;
+	border-style: solid;
+	border-bottom-width: 9px;
+	border-right-width: 9px;
+	border-color: rgba(255, 255, 255, 0.9);
+	background-color: rgba(255, 0, 0, 0.9);
+	outline-style: solid;
+	outline-width: 1px;
+	outline-color: rgba(0, 0, 0, 0.8);
+	cursor: pointer;
+}
+.BlackBoard {
+	position: relative;
+	padding: 5px;
+	border-style: solid;
+	border-width: 2px;
+	border-color: rgba(80, 80, 80, 0.9);
+	border-radius: 2px;
+	font-size: 20px;
+	color: #F0F0F0;
+	background-color: rgba(0, 0, 0, 0.9);
+}
+.classWindowScroller {
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	position: fixed;
+	top: 0;
+	left: 0;
+	border-right-style: double;
+	border-right-width: 6px;
+	border-right-color: rgb(250, 5, 0);
+	height: 100%;
+	width: 10px;
+	min-width: 18px;
+	background-color: rgba(48, 0, 0, 0.8);
+	white-space: nowrap;
+	overflow: hidden;
+	transition-property: width;
+	transition-duration: 0.2s;
+	transition-timing-function: linear;
+}
+.classButton {
+	height: 28px;
+	border-style: solid;
+	border-width: 2px;
+	border-color: rgba(250, 250, 250, 0.9);
+	border-radius: 2px;
+	padding: 2px;
+	font-size: 20px;
+	color: rgba(240, 240, 240, 1.0);
+	background-color: rgba(0, 0, 0, 0.9);
+	cursor: pointer;
+}
+.classButton:active {
+	border-style: groove;
+	background-color: rgba(50, 50, 50, 0.7);
+}
+
+#Readme {
+	position: absolute;
+	top: 10px;
+	left: 50%;
+	border-style: solid;
+	border-width: 3px;
+	border-color: rgb(255, 255, 255);
+	height: 11px;
+	width: 11px;
+	background-color: rgb(255, 0, 0);
+	outline-style: solid;
+	outline-width: 3px;
+	outline-color: rgb(255, 0, 0);
+}
+
