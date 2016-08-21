@@ -129,16 +129,16 @@ draw()
 		context.beginPath();
 		context.strokeStyle = 'blue';
 		xy = calc_view(
-		    -offset.x / 2.0,
-		    i * interval - offset.y / 2.0,
+		    -offset.x,
+		    i * interval - offset.y,
 		    brane[i * braneSize.width]);
-		context.moveTo(xy.x + offset.x / 2.0, xy.y + offset.y / 2.0);
+		context.moveTo(xy.x + offset.x, xy.y + offset.y);
 		for (j = 1; j < braneSize.width; j++) {
 			xy = calc_view(
-			    j * interval - offset.x / 2.0,
-			    i * interval - offset.y / 2.0,
+			    j * interval - offset.x,
+			    i * interval - offset.y,
 			    brane[i * braneSize.width + j]);
-			context.lineTo(xy.x + offset.x / 2.0, xy.y + offset.y / 2.0);
+			context.lineTo(xy.x + offset.x, xy.y + offset.y);
 		}
 		context.stroke();
 	}
@@ -146,16 +146,16 @@ draw()
 		context.beginPath();
 		context.strokeStyle = 'blue';
 		xy = calc_view(
-		    j * interval - offset.x / 2.0,
-		    -offset.y / 2.0,
+		    j * interval - offset.x,
+		    -offset.y,
 		    brane[j]);
-		context.moveTo(xy.x + offset.x / 2.0, xy.y + offset.y / 2.0);
+		context.moveTo(xy.x + offset.x, xy.y + offset.y);
 		for (i = 1; i < braneSize.height; i++) {
 			xy = calc_view(
-			    j * interval - offset.x / 2.0,
-			    i * interval - offset.y / 2.0,
+			    j * interval - offset.x,
+			    i * interval - offset.y,
 			    brane[i * braneSize.width + j]);
-			context.lineTo(xy.x + offset.x / 2.0, xy.y + offset.y / 2.0);
+			context.lineTo(xy.x + offset.x, xy.y + offset.y);
 		}
 		context.stroke();
 	}
