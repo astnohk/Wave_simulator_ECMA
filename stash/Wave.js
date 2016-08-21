@@ -234,6 +234,12 @@ norm_XYZ(xyz)
 }
 
 function
+innerProduct_XYZ(A, B)
+{
+	return A.x * B.x + A.y * B.y + A.z * B.z;
+}
+
+function
 rotation(x, y, XYZ)
 {
 	var ret = {x: 0, y: 0, z: 0};
@@ -265,6 +271,20 @@ rot_field_XYZ(x, y)
 	field_XYZ.X = rotation(x, y, field_XYZ.X);
 	field_XYZ.Y = rotation(x, y, field_XYZ.Y);
 	field_XYZ.Z = rotation(x, y, field_XYZ.Z);
+	// Reduce residue of Y
+	var a = innerProduct_XYZ(field_XYZ.X, field_XYZ.Y);
+	field_XYZ.Y.x -= a * field_XYZ.X.x;
+	field_XYZ.Y.y -= a * field_XYZ.X.y;
+	field_XYZ.Y.z -= a * field_XYZ.X.z;
+	// Reduce residue of Z
+	a = innerProduct_XYZ(field_XYZ.X, field_XYZ.Z);
+	field_XYZ.Z.x -= a * field_XYZ.X.x;
+	field_XYZ.Z.y -= a * field_XYZ.X.y;
+	field_XYZ.Z.z -= a * field_XYZ.X.z;
+	a = innerProduct_XYZ(field_XYZ.Y, field_XYZ.Z);
+	field_XYZ.Z.x -= a * field_XYZ.Y.x;
+	field_XYZ.Z.y -= a * field_XYZ.Y.y;
+	field_XYZ.Z.z -= a * field_XYZ.Y.z;
 }
 
 function
