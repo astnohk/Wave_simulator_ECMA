@@ -20,6 +20,9 @@ var field_XYZ = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x
 var offset = {x: 0, y: 0, z: 0};
 var rot_degree = 3600;
 
+var prev_clientX = 0;
+var prev_clientY = 0;
+
 
 
 // Initialize
@@ -41,6 +44,8 @@ init()
 	offset.x = braneSize.width * interval / 2.0
 	offset.y = braneSize.height * interval / 2.0
 	canvas = document.getElementById("mainPool");
+	canvas.addEventListener("mousedown", mouseClick, false);
+	canvas.addEventListener("mousemove", mouseRotation, false);
 	context = canvas.getContext("2d");
 	rot_field_XYZ(0, -450);
 	// Start loop
@@ -213,5 +218,24 @@ rot_field_XYZ(x, y)
 	field_XYZ.X = rotation(x, y, field_XYZ.X);
 	field_XYZ.Y = rotation(x, y, field_XYZ.Y);
 	field_XYZ.Z = rotation(x, y, field_XYZ.Z);
+}
+
+function
+mouseClick(event)
+{
+	if (event.type === "mousedown") {
+		prev_clientX = event.clientX;
+		prev_clientY = event.clientY;
+	}
+}
+
+function
+mouseRotation(event)
+{
+	if (event.buttons & 1 != 0) {
+		rot_field_XYZ(event.clientX - prev_clientX, event.clientY - prev_clientY);
+		prev_clientX = event.clientX;
+		prev_clientY = event.clientY;
+	}
 }
 
