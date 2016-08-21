@@ -189,19 +189,31 @@ draw()
 	// Show XYZ coordinate
 	context.lineWidth = 2;
 	context.beginPath();
-	context.moveTo(40, 40);
+	context.moveTo(42, 42);
 	context.strokeStyle = "red";
-	context.lineTo(40 + 40 * field_XYZ.X.x, 40 + 40 * field_XYZ.X.y);
+	context.lineTo(42 + 42 * field_XYZ.X.x, 42 + 42 * field_XYZ.X.y);
+	xy = calc_view(-7, -7, 0);
+	context.lineTo(42 + 42 * field_XYZ.X.x + xy.x, 42 + 42 * field_XYZ.X.y + xy.y);
+	xy = calc_view(-7, 8, 0);
+	context.lineTo(42 + 42 * field_XYZ.X.x + xy.x, 42 + 42 * field_XYZ.X.y + xy.y);
 	context.stroke();
 	context.beginPath();
-	context.moveTo(40, 40);
+	context.moveTo(42, 42);
 	context.strokeStyle = "lime";
-	context.lineTo(40 + 40 * field_XYZ.Y.x, 40 + 40 * field_XYZ.Y.y);
+	context.lineTo(42 + 42 * field_XYZ.Y.x, 42 + 42 * field_XYZ.Y.y);
+	xy = calc_view(7, -7, 0);
+	context.lineTo(42 + 42 * field_XYZ.Y.x + xy.x, 42 + 42 * field_XYZ.Y.y + xy.y);
+	xy = calc_view(-8, -7, 0);
+	context.lineTo(42 + 42 * field_XYZ.Y.x + xy.x, 42 + 42 * field_XYZ.Y.y + xy.y);
 	context.stroke();
 	context.beginPath();
-	context.moveTo(40, 40);
+	context.moveTo(42, 42);
 	context.strokeStyle = "blue";
-	context.lineTo(40 + 40 * field_XYZ.Z.x, 40 + 40 * field_XYZ.Z.y);
+	context.lineTo(42 + 42 * field_XYZ.Z.x, 42 + 42 * field_XYZ.Z.y);
+	xy = calc_view(0, 7, -7);
+	context.lineTo(42 + 42 * field_XYZ.Z.x + xy.x, 42 + 42 * field_XYZ.Z.y + xy.y);
+	xy = calc_view(0, -8, -7);
+	context.lineTo(42 + 42 * field_XYZ.Z.x + xy.x, 42 + 42 * field_XYZ.Z.y + xy.y);
 	context.stroke();
 	context.lineWidth = 1;
 }
