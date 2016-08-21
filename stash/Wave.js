@@ -305,6 +305,7 @@ rot_field_XYZ_onZ(x, y)
 function
 mouseClick(event)
 {
+	event.preventDefault();
 	if (event.type === "mousedown") {
 		prev_clientX = event.clientX;
 		prev_clientY = event.clientY;
@@ -317,6 +318,7 @@ mouseClick(event)
 function
 mouseRotation(event)
 {
+	event.preventDefault();
 	if (event.type === "mousemove" && event.buttons & 1 != 0) {
 		rot_field_XYZ_onZ(event.clientX - prev_clientX, event.clientY - prev_clientY);
 		prev_clientX = event.clientX;
