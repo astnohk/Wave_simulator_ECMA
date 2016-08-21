@@ -11,7 +11,7 @@ var braneSize = {width: 33, height: 33};
 var brane = new Array();
 var brane_tmp = new Array();
 var vel = new Array();
-var k_brane = 0.4;
+var k_brane = 0.7;
 var interval = 30; // drawing interval pixels
 
 var rainThreshold = 0.1;
@@ -92,15 +92,23 @@ accel(i, j)
 	var a = 0.0;
 	if (i > 0) {
 		a += k_brane * (brane[(i - 1) * braneSize.width + j] - interest);
+	} else {
+		a += -k_brane * interest;
 	}
 	if (j > 0) {
 		a += k_brane * (brane[i * braneSize.width + j - 1] - interest);
+	} else {
+		a += -k_brane * interest;
 	}
 	if (i < braneSize.height - 1) {
 		a += k_brane * (brane[(i + 1) * braneSize.width + j] - interest);
+	} else {
+		a += -k_brane * interest;
 	}
 	if (j < braneSize.width - 1) {
 		a += k_brane * (brane[i * braneSize.width + j + 1] - interest);
+	} else {
+		a += -k_brane * interest;
 	}
 	return a;
 }
@@ -110,7 +118,9 @@ draw()
 {
 	context.fillRect(0, 0, canvas.width, canvas.height);
 	var xy = {x: 0, y: 0};
-	for (var i = 0; i < braneSize.height; i++) {
+	var i;
+	var j;
+	for (i = 0; i < braneSize.height; i++) {
 		context.beginPath();
 		context.strokeStyle = 'blue';
 		xy = calc_view(
@@ -118,7 +128,24 @@ draw()
 		    i * interval - offset.y / 2.0,
 		    brane[i * braneSize.width]);
 		context.moveTo(xy.x + offset.x / 2.0, xy.y + offset.y / 2.0);
-		for (var j = 1; j < braneSize.width; j++) {
+		for (j = 1; j < braneSize.width; j++) {
+			xy = calc_view(
+			    j * interval - offset.x / 2.0,
+			    i * interval - offset.y / 2.0,
+			    brane[i * braneSize.width + j]);
+			context.lineTo(xy.x + offset.x / 2.0, xy.y + offset.y / 2.0);
+		}
+		context.stroke();
+	}
+	for (j = 0; j < braneSize.width; j++) {
+		context.beginPath();
+		context.strokeStyle = 'blue';
+		xy = calc_view(
+		    j * interval - offset.x / 2.0,
+		    -offset.y / 2.0,
+		    brane[j]);
+		context.moveTo(xy.x + offset.x / 2.0, xy.y + offset.y / 2.0);
+		for (i = 1; i < braneSize.height; i++) {
 			xy = calc_view(
 			    j * interval - offset.x / 2.0,
 			    i * interval - offset.y / 2.0,
