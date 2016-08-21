@@ -16,7 +16,7 @@ var interval = 30; // drawing interval pixels
 
 var rainThreshold = 0.1;
 
-var field_XYZ = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: -1.0}};
+var field_XYZ = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
 var offset = {x: 0, y: 0, z: 0};
 var rot_degree = 3600;
 
@@ -47,7 +47,7 @@ init()
 	canvas.addEventListener("mousedown", mouseClick, false);
 	canvas.addEventListener("mousemove", mouseRotation, false);
 	context = canvas.getContext("2d");
-	rot_field_XYZ(0, -450);
+	rot_field_XYZ(0, 1350);
 	// Start loop
 	timeClock = setInterval(loop, 25);
 	// Random impulse
@@ -187,6 +187,12 @@ calc_view(x, y, z)
 }
 
 function
+norm_XYZ(xyz)
+{
+	return Math.sqrt(xyz.x * xyz.x + xyz.y * xyz.y + xyz.z * xyz.z);
+}
+
+function
 rotation(x, y, XYZ)
 {
 	var ret = {x: 0, y: 0, z: 0};
@@ -203,7 +209,7 @@ rotation(x, y, XYZ)
 	    ret.z * Math.cos(2.0 * Math.PI * y / rot_degree) +
 	    XYZ.y * Math.sin(2.0 * Math.PI * y / rot_degree);
 	// normalize
-	var norm = Math.sqrt(ret.x * ret.x + ret.y * ret.y + ret.z * ret.z);
+	var norm = norm_XYZ(ret);
 	if (norm > 0.1) {
 		ret.x /= norm;
 		ret.y /= norm;
@@ -221,6 +227,32 @@ rot_field_XYZ(x, y)
 }
 
 function
+rot_field_XYZ_onZ(x, y)
+{
+	var X = {x: 0, y: 0, z: 0};
+	var Y = {x: 0, y: 0, z: 0};
+	X = field_XYZ.X;
+	Y = field_XYZ.Y;
+	var cos = Math.cos(2.0 * Math.PI * x / rot_degree);
+	var sin = Math.sin(2.0 * Math.PI * x / rot_degree);
+	field_XYZ.X.x = X.x * cos - Y.x * sin;
+	field_XYZ.X.y = X.y * cos - Y.y * sin;
+	field_XYZ.X.z = X.z * cos - Y.z * sin;
+	field_XYZ.Y.x = Y.x * cos + X.x * sin;
+	field_XYZ.Y.y = Y.y * cos + X.y * sin;
+	field_XYZ.Y.z = Y.z * cos + X.z * sin;
+	// normalize
+	var norm = norm_XYZ(field_XYZ.X);
+	if (norm > 0.1) {
+		field_XYZ.X.x /= norm;
+		field_XYZ.X.y /= norm;
+		field_XYZ.X.z /= norm;
+	}
+	// rot with drag on Y axis same as normal rotation
+	rot_field_XYZ(0, y);
+}
+
+function
 mouseClick(event)
 {
 	if (event.type === "mousedown") {
@@ -233,7 +265,7 @@ function
 mouseRotation(event)
 {
 	if (event.buttons & 1 != 0) {
-		rot_field_XYZ(event.clientX - prev_clientX, event.clientY - prev_clientY);
+		rot_field_XYZ_onZ(event.clientX - prev_clientX, event.clientY - prev_clientY);
 		prev_clientX = event.clientX;
 		prev_clientY = event.clientY;
 	}
