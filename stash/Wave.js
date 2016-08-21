@@ -160,6 +160,7 @@ draw()
 		context.stroke();
 	}
 	// Show XYZ coordinate
+	context.lineWidth = 2;
 	context.beginPath();
 	context.moveTo(40, 40);
 	context.strokeStyle = "red";
@@ -167,7 +168,7 @@ draw()
 	context.stroke();
 	context.beginPath();
 	context.moveTo(40, 40);
-	context.strokeStyle = "green";
+	context.strokeStyle = "lime";
 	context.lineTo(40 + 40 * field_XYZ.Y.x, 40 + 40 * field_XYZ.Y.y);
 	context.stroke();
 	context.beginPath();
@@ -175,6 +176,7 @@ draw()
 	context.strokeStyle = "blue";
 	context.lineTo(40 + 40 * field_XYZ.Z.x, 40 + 40 * field_XYZ.Z.y);
 	context.stroke();
+	context.lineWidth = 1;
 }
 
 function
