@@ -7,6 +7,8 @@ var canvas;
 var context;
 
 var dt = 0.25;
+var g = 2.4;
+var f_float = 5.0;
 var braneSize = {width: 33, height: 33};
 var brane = new Array(braneSize.width * braneSize.height);
 var brane_tmp = new Array(braneSize.width * braneSize.height);
@@ -26,6 +28,10 @@ var prev_clientX = 0;
 var prev_clientY = 0;
 
 // 3D model
+//var boatPosition = {x: braneSize.width * interval / 2.0, y: braneSize.height * interval / 2.0, z: 0};
+var boatPosition = {x: 200, y: 200, z: 0};
+var boatVelocity = {x: 0, y: 0, z: 0};
+var boatMass = 4;
 var boat = make3dModel(
     [[{x:0, y:35, z:10}, {x:-15, y:20, z:10}, {x:15, y:20, z:10}],
     [{x:-15, y:20, z:10}, {x:-15, y:-20, z:10}, {x:15, y:20, z:10}],
@@ -94,7 +100,8 @@ loop()
 	physics();
 	draw();
 	// Draw 3D model
-	draw3dModel(boat, {x: 300, y: 300, z: 0});
+	physics_boat();
+	draw3dModel(boat, boatPosition);
 }
 
 
@@ -113,6 +120,42 @@ physics()
 	for (var n = 0; n < brane.length; n++) {
 		brane[n] = brane_tmp[n];
 	}
+}
+
+function
+physics_boat()
+{
+	var x = Math.floor(boatPosition.x / interval);
+	var y = Math.floor(boatPosition.y / interval);
+	if (0 <= x && x < braneSize.width && 0 <= y && y < braneSize.height) {
+		if (boatPosition.z > brane[y * braneSize.width + x]) { // Under the water
+			boatVelocity.z -= g * dt; // Gravity
+			boatVelocity.x *= 0.98;
+			boatVelocity.y *= 0.98;
+			boatVelocity.z *= 0.98;
+		} else {
+			boatVelocity.z += dt * f_float / boatMass; // Floating
+			boatVelocity.x *= 0.9;
+			boatVelocity.y *= 0.9;
+			boatVelocity.z *= 0.9;
+			brane[y * braneSize.width + x] -= 0.3;
+		}
+	} else {
+		if (boatPosition.z > 0) { // Under the water
+			boatVelocity.z -= g * dt; // Gravity
+			boatVelocity.x *= 0.98;
+			boatVelocity.y *= 0.98;
+			boatVelocity.z *= 0.98;
+		} else {
+			boatVelocity.z += dt * f_float / boatMass; // Floating
+			boatVelocity.x *= 0.9;
+			boatVelocity.y *= 0.9;
+			boatVelocity.z *= 0.9;
+		}
+	}
+	boatPosition.x += boatVelocity.x * dt;
+	boatPosition.y += boatVelocity.y * dt;
+	boatPosition.z += boatVelocity.z * dt;
 }
 
 function
@@ -234,7 +277,7 @@ draw()
 }
 
 function
-draw3dModel(model, offset_model)
+draw3dModel(model, position)
 {
 	var xy;
 	context.strokeStyle = "white";
@@ -244,15 +287,15 @@ draw3dModel(model, offset_model)
 		}
 		context.beginPath();
 		xy = calcView(
-		    offset_model.x + model.edges[i][0].x - offset.x,
-		    offset_model.y + model.edges[i][0].y - offset.y,
-		    offset_model.z + model.edges[i][0].z - offset.z);
+		    model.edges[i][0].x + position.x - offset.x,
+		    model.edges[i][0].y + position.y - offset.y,
+		    model.edges[i][0].z + position.z - offset.z);
 		context.moveTo(xy.x + offset.x, xy.y + offset.y);
 		for (var j = 1; j <= model.edges[i].length; j++) {
 			xy = calcView(
-			    offset_model.x + model.edges[i][j % model.edges[i].length].x - offset.x,
-			    offset_model.y + model.edges[i][j % model.edges[i].length].y - offset.y,
-			    offset_model.z + model.edges[i][j % model.edges[i].length].z - offset.z);
+			    model.edges[i][j % model.edges[i].length].x + position.x - offset.x,
+			    model.edges[i][j % model.edges[i].length].y + position.y - offset.y,
+			    model.edges[i][j % model.edges[i].length].z + position.z - offset.z);
 			context.lineTo(xy.x + offset.x, xy.y + offset.y);
 		}
 		context.stroke();
