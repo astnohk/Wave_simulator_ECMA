@@ -8,9 +8,9 @@ var context;
 
 var dt = 0.25;
 var braneSize = {width: 33, height: 33};
-var brane = new Array();
-var brane_tmp = new Array();
-var vel = new Array();
+var brane = new Array(braneSize.width * braneSize.height);
+var brane_tmp = new Array(braneSize.width * braneSize.height);
+var vel = new Array(braneSize.width * braneSize.height);
 var k_brane = 0.2;
 var interval = 30; // drawing interval pixels
 
@@ -20,10 +20,23 @@ var field_XYZ = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x
 var offset = {x: 0, y: 0, z: 0};
 var rot_degree = 3600;
 var colormap_quantize = 200;
-var colormap = new Array();
+var colormap = new Array(colormap_quantize);
 
 var prev_clientX = 0;
 var prev_clientY = 0;
+
+// 3D model
+var boat = make3dModel(
+    [[{x:0, y:35, z:10}, {x:-15, y:20, z:10}, {x:15, y:20, z:10}],
+    [{x:-15, y:20, z:10}, {x:-15, y:-20, z:10}, {x:15, y:20, z:10}],
+    [{x:15, y:20, z:10}, {x:-15, y:-20, z:10}, {x:15, y:-20, z:10}],
+    [{x:0, y:35, z:10}, {x:0, y:20, z:-5}, {x:-15, y:20, z:10}],
+    [{x:0, y:35, z:10}, {x:15, y:20, z:10}, {x:0, y:20, z:-5}],
+    [{x:-15, y:20, z:10}, {x:0, y:20, z:-5}, {x:-15, y:-20, z:10}],
+    [{x:0, y:20, z:-5}, {x:0, y:-20, z:-5}, {x:-15, y:-20, z:10}],
+    [{x:15, y:20, z:10}, {x:15, y:-20, z:10}, {x:0, y:20, z:-5}],
+    [{x:0, y:20, z:-5}, {x:15, y:-20, z:10}, {x:0, y:-20, z:-5}],
+    [{x:-15, y:-20, z:10}, {x:0, y:-20, z:-5}, {x:15, y:-20, z:10}]]);
 
 
 
@@ -80,6 +93,8 @@ loop()
 {
 	physics();
 	draw();
+	// Draw 3D model
+	draw3dModel(boat, {x: 300, y: 300, z: 0});
 }
 
 
@@ -155,12 +170,12 @@ draw()
 			amp = Math.round(2 * Math.max(Math.abs(brane[i * braneSize.width + j - 1]), Math.abs(brane[i * braneSize.width + j])));
 			context.strokeStyle = colormap[Math.min(colormap_quantize, amp)];
 			context.beginPath();
-			xy = calc_view(
+			xy = calcView(
 			    (j - 1) * interval - offset.x,
 			    i * interval - offset.y,
 			    brane[i * braneSize.width + j - 1]);
 			context.moveTo(xy.x + offset.x, xy.y + offset.y);
-			xy = calc_view(
+			xy = calcView(
 			    j * interval - offset.x,
 			    i * interval - offset.y,
 			    brane[i * braneSize.width + j]);
@@ -173,12 +188,12 @@ draw()
 			amp = Math.round(2 * Math.max(Math.abs(brane[(i - 1) * braneSize.width + j]), Math.abs(brane[i * braneSize.width + j])));
 			context.strokeStyle = colormap[Math.min(colormap_quantize, amp)];
 			context.beginPath();
-			xy = calc_view(
+			xy = calcView(
 			    j * interval - offset.x,
 			    (i - 1) * interval - offset.y,
 			    brane[(i - 1) * braneSize.width + j]);
 			context.moveTo(xy.x + offset.x, xy.y + offset.y);
-			xy = calc_view(
+			xy = calcView(
 			    j * interval - offset.x,
 			    i * interval - offset.y,
 			    brane[i * braneSize.width + j]);
@@ -192,34 +207,91 @@ draw()
 	context.moveTo(42, 42);
 	context.strokeStyle = "red";
 	context.lineTo(42 + 42 * field_XYZ.X.x, 42 + 42 * field_XYZ.X.y);
-	xy = calc_view(-7, -7, 0);
+	xy = calcView(-7, -7, 0);
 	context.lineTo(42 + 42 * field_XYZ.X.x + xy.x, 42 + 42 * field_XYZ.X.y + xy.y);
-	xy = calc_view(-7, 8, 0);
+	xy = calcView(-7, 8, 0);
 	context.lineTo(42 + 42 * field_XYZ.X.x + xy.x, 42 + 42 * field_XYZ.X.y + xy.y);
 	context.stroke();
 	context.beginPath();
 	context.moveTo(42, 42);
 	context.strokeStyle = "lime";
 	context.lineTo(42 + 42 * field_XYZ.Y.x, 42 + 42 * field_XYZ.Y.y);
-	xy = calc_view(7, -7, 0);
+	xy = calcView(7, -7, 0);
 	context.lineTo(42 + 42 * field_XYZ.Y.x + xy.x, 42 + 42 * field_XYZ.Y.y + xy.y);
-	xy = calc_view(-8, -7, 0);
+	xy = calcView(-8, -7, 0);
 	context.lineTo(42 + 42 * field_XYZ.Y.x + xy.x, 42 + 42 * field_XYZ.Y.y + xy.y);
 	context.stroke();
 	context.beginPath();
 	context.moveTo(42, 42);
 	context.strokeStyle = "blue";
 	context.lineTo(42 + 42 * field_XYZ.Z.x, 42 + 42 * field_XYZ.Z.y);
-	xy = calc_view(0, 7, -7);
+	xy = calcView(0, 7, -7);
 	context.lineTo(42 + 42 * field_XYZ.Z.x + xy.x, 42 + 42 * field_XYZ.Z.y + xy.y);
-	xy = calc_view(0, -8, -7);
+	xy = calcView(0, -8, -7);
 	context.lineTo(42 + 42 * field_XYZ.Z.x + xy.x, 42 + 42 * field_XYZ.Z.y + xy.y);
 	context.stroke();
 	context.lineWidth = 1;
 }
 
 function
-calc_view(x, y, z)
+draw3dModel(model, offset_model)
+{
+	var xy;
+	context.strokeStyle = "white";
+	for (var i = 0; i < model.edges.length; i++) {
+		if (model.normalVector[i].x * field_XYZ.X.z + model.normalVector[i].y * field_XYZ.Y.z + model.normalVector[i].z * field_XYZ.Z.z > 0) {;
+			continue;
+		}
+		context.beginPath();
+		xy = calcView(
+		    offset_model.x + model.edges[i][0].x - offset.x,
+		    offset_model.y + model.edges[i][0].y - offset.y,
+		    offset_model.z + model.edges[i][0].z - offset.z);
+		context.moveTo(xy.x + offset.x, xy.y + offset.y);
+		for (var j = 1; j <= model.edges[i].length; j++) {
+			xy = calcView(
+			    offset_model.x + model.edges[i][j % model.edges[i].length].x - offset.x,
+			    offset_model.y + model.edges[i][j % model.edges[i].length].y - offset.y,
+			    offset_model.z + model.edges[i][j % model.edges[i].length].z - offset.z);
+			context.lineTo(xy.x + offset.x, xy.y + offset.y);
+		}
+		context.stroke();
+	}
+}
+
+function
+make3dModel(modelEdges)
+{
+	var model = {edges: modelEdges, normalVector: new Array(modelEdges.length)};
+	// Compute normal vector
+	for (var i = 0; i < modelEdges.length; i++) {
+		model.normalVector[i] = {x: 0, y: 0, z: 0};
+		if (modelEdges[i].length < 3) {
+			continue;
+		}
+		var a = {
+		    x: modelEdges[i][2].x - modelEdges[i][1].x,
+		    y: modelEdges[i][2].y - modelEdges[i][1].y,
+		    z: modelEdges[i][2].z - modelEdges[i][1].z};
+		var b = {
+		    x: modelEdges[i][0].x - modelEdges[i][1].x,
+		    y: modelEdges[i][0].y - modelEdges[i][1].y,
+		    z: modelEdges[i][0].z - modelEdges[i][1].z};
+		model.normalVector[i].x = a.y * b.z - a.z * b.y;
+		model.normalVector[i].y = a.z * b.x - a.x * b.z;
+		model.normalVector[i].z = a.x * b.y - a.y * b.x;
+		var norm = norm_XYZ(model.normalVector[i]);
+		if (norm > 0.01) {
+			model.normalVector[i].x /= norm;
+			model.normalVector[i].y /= norm;
+			model.normalVector[i].z /= norm;
+		}
+	}
+	return model;
+}
+
+function
+calcView(x, y, z)
 {
 	var xy = {x: 0, y: 0};
 	xy.x = x * field_XYZ.X.x + y * field_XYZ.Y.x + z * field_XYZ.Z.x;
