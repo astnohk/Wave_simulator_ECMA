@@ -33,15 +33,11 @@ var boatPosition = {x: 200, y: 200, z: 0};
 var boatVelocity = {x: 0, y: 0, z: 0};
 var boatMass = 4;
 var boat = make3dModel(
-    [[{x:0, y:35, z:10}, {x:-15, y:20, z:10}, {x:15, y:20, z:10}],
-    [{x:-15, y:20, z:10}, {x:-15, y:-20, z:10}, {x:15, y:20, z:10}],
-    [{x:15, y:20, z:10}, {x:-15, y:-20, z:10}, {x:15, y:-20, z:10}],
+    [[{x:0, y:35, z:10}, {x:-15, y:20, z:10}, {x:-15, y:-20, z:10}, {x:15, y:-20, z:10}, {x:15, y:20, z:10}],
     [{x:0, y:35, z:10}, {x:0, y:20, z:-5}, {x:-15, y:20, z:10}],
     [{x:0, y:35, z:10}, {x:15, y:20, z:10}, {x:0, y:20, z:-5}],
-    [{x:-15, y:20, z:10}, {x:0, y:20, z:-5}, {x:-15, y:-20, z:10}],
-    [{x:0, y:20, z:-5}, {x:0, y:-20, z:-5}, {x:-15, y:-20, z:10}],
-    [{x:15, y:20, z:10}, {x:15, y:-20, z:10}, {x:0, y:20, z:-5}],
-    [{x:0, y:20, z:-5}, {x:15, y:-20, z:10}, {x:0, y:-20, z:-5}],
+    [{x:-15, y:20, z:10}, {x:0, y:20, z:-5}, {x:0, y:-20, z:-5}, {x:-15, y:-20, z:10}],
+    [{x:15, y:20, z:10}, {x:15, y:-20, z:10}, {x:0, y:-20, z:-5}, {x:0, y:20, z:-5}],
     [{x:-15, y:-20, z:10}, {x:0, y:-20, z:-5}, {x:15, y:-20, z:10}]]);
 
 
@@ -308,29 +304,36 @@ make3dModel(modelEdges)
 	var model = {edges: modelEdges, normalVector: new Array(modelEdges.length)};
 	// Compute normal vector
 	for (var i = 0; i < modelEdges.length; i++) {
-		model.normalVector[i] = {x: 0, y: 0, z: 0};
-		if (modelEdges[i].length < 3) {
-			continue;
-		}
-		var a = {
-		    x: modelEdges[i][2].x - modelEdges[i][1].x,
-		    y: modelEdges[i][2].y - modelEdges[i][1].y,
-		    z: modelEdges[i][2].z - modelEdges[i][1].z};
-		var b = {
-		    x: modelEdges[i][0].x - modelEdges[i][1].x,
-		    y: modelEdges[i][0].y - modelEdges[i][1].y,
-		    z: modelEdges[i][0].z - modelEdges[i][1].z};
-		model.normalVector[i].x = a.y * b.z - a.z * b.y;
-		model.normalVector[i].y = a.z * b.x - a.x * b.z;
-		model.normalVector[i].z = a.x * b.y - a.y * b.x;
-		var norm = norm_XYZ(model.normalVector[i]);
-		if (norm > 0.01) {
-			model.normalVector[i].x /= norm;
-			model.normalVector[i].y /= norm;
-			model.normalVector[i].z /= norm;
-		}
+		model.normalVector[i] = calcNormalVector(modelEdges[i]);
 	}
 	return model;
+}
+
+function
+calcNormalVector(edges)
+{
+	var vector = {x: 0, y: 0, z: 0};
+	if (edges.length < 3) {
+		return vector;
+	}
+	var a = {
+	    x: edges[2].x - edges[1].x,
+	    y: edges[2].y - edges[1].y,
+	    z: edges[2].z - edges[1].z};
+	var b = {
+	    x: edges[0].x - edges[1].x,
+	    y: edges[0].y - edges[1].y,
+	    z: edges[0].z - edges[1].z};
+	vector.x = a.y * b.z - a.z * b.y;
+	vector.y = a.z * b.x - a.x * b.z;
+	vector.z = a.x * b.y - a.y * b.x;
+	var norm = norm_XYZ(vector);
+	if (norm > 0.01) {
+		vector.x /= norm;
+		vector.y /= norm;
+		vector.z /= norm;
+	}
+	return vector;
 }
 
 function
@@ -355,7 +358,19 @@ innerProduct_XYZ(A, B)
 }
 
 function
-rotation(x, y, XYZ)
+normalize_XYZ(xyz)
+{
+	var norm = norm_XYZ(xyz);
+	if (norm > 0.1) {
+		xyz.x /= norm;
+		xyz.y /= norm;
+		xyz.z /= norm;
+	}
+	return xyz;
+}
+
+function
+rotate(x, y, XYZ)
 {
 	var ret = {x: 0, y: 0, z: 0};
 	ret.x =
@@ -370,22 +385,19 @@ rotation(x, y, XYZ)
 	ret.z =
 	    ret.z * Math.cos(2.0 * Math.PI * y / rot_degree) +
 	    XYZ.y * Math.sin(2.0 * Math.PI * y / rot_degree);
-	// normalize
-	var norm = norm_XYZ(ret);
-	if (norm > 0.1) {
-		ret.x /= norm;
-		ret.y /= norm;
-		ret.z /= norm;
-	}
 	return ret;
 }
 
 function
 rot_field_XYZ(x, y)
 {
-	field_XYZ.X = rotation(x, y, field_XYZ.X);
-	field_XYZ.Y = rotation(x, y, field_XYZ.Y);
-	field_XYZ.Z = rotation(x, y, field_XYZ.Z);
+	field_XYZ.X = rotate(x, y, field_XYZ.X);
+	field_XYZ.Y = rotate(x, y, field_XYZ.Y);
+	field_XYZ.Z = rotate(x, y, field_XYZ.Z);
+	// Normalize
+	field_XYZ.X = normalize_XYZ(field_XYZ.X);
+	field_XYZ.Y = normalize_XYZ(field_XYZ.Y);
+	field_XYZ.Z = normalize_XYZ(field_XYZ.Z);
 	// Reduce residue of Y
 	var a = innerProduct_XYZ(field_XYZ.X, field_XYZ.Y);
 	field_XYZ.Y.x -= a * field_XYZ.X.x;
@@ -435,6 +447,42 @@ rot_field_XYZ_onZ(x, y)
 	}
 	// rot with drag on Y axis same as normal rotation
 	rot_field_XYZ(0, y);
+}
+
+function
+rotate3d(x, y, yaw, XYZ)
+{
+	var ret = {x: 0, y: 0, z: 0};
+	ret.z =
+	    XYZ.z * Math.cos(2.0 * Math.PI * x / rot_degree) +
+	    XYZ.x * Math.sin(2.0 * Math.PI * x / rot_degree);
+	XYZ.x =
+	    XYZ.x * Math.cos(2.0 * Math.PI * x / rot_degree) -
+	    XYZ.z * Math.sin(2.0 * Math.PI * x / rot_degree);
+	XYZ.z =
+	    ret.z * Math.cos(2.0 * Math.PI * y / rot_degree) +
+	    XYZ.y * Math.sin(2.0 * Math.PI * y / rot_degree);
+	XYZ.y =
+	    XYZ.y * Math.cos(2.0 * Math.PI * y / rot_degree) -
+	    ret.z * Math.sin(2.0 * Math.PI * y / rot_degree);
+	ret.x =
+	    XYZ.x * Math.cos(2.0 * Math.PI * yaw / rot_degree) -
+	    XYZ.y * Math.sin(2.0 * Math.PI * yaw / rot_degree);
+	ret.y =
+	    XYZ.y * Math.cos(2.0 * Math.PI * yaw / rot_degree) +
+	    XYZ.x * Math.sin(2.0 * Math.PI * yaw / rot_degree);
+	return ret;
+}
+
+function
+rotate3dModel(x, y, yaw, model)
+{
+	for (var i = 0; i < model.edges.length; i++) {
+		for (var j = 0; j < model.edges[i].length; j++) {
+			model.edges[i][j] = rotate3d(x, y, yaw, model.edges[i][j]);
+		}
+		model.normalVector[i] = calcNormalVector(model.edges[i]);
+	}
 }
 
 function
