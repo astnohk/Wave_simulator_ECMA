@@ -134,7 +134,7 @@ physics_boat()
 			boatVelocity.x *= 0.9;
 			boatVelocity.y *= 0.9;
 			boatVelocity.z *= 0.9;
-			brane[y * braneSize.width + x] -= 0.3;
+			brane[y * braneSize.width + x] -= boatMass * 0.3;
 		}
 	} else {
 		if (boatPosition.z > 0) { // Under the water
@@ -277,21 +277,21 @@ draw3dModel(model, position)
 {
 	var xy;
 	context.strokeStyle = "white";
-	for (var i = 0; i < model.edges.length; i++) {
+	for (var i = 0; i < model.edges.current.length; i++) {
 		if (model.normalVector[i].x * field_XYZ.X.z + model.normalVector[i].y * field_XYZ.Y.z + model.normalVector[i].z * field_XYZ.Z.z > 0) {;
 			continue;
 		}
 		context.beginPath();
 		xy = calcView(
-		    model.edges[i][0].x + position.x - offset.x,
-		    model.edges[i][0].y + position.y - offset.y,
-		    model.edges[i][0].z + position.z - offset.z);
+		    model.edges.current[i][0].x + position.x - offset.x,
+		    model.edges.current[i][0].y + position.y - offset.y,
+		    model.edges.current[i][0].z + position.z - offset.z);
 		context.moveTo(xy.x + offset.x, xy.y + offset.y);
-		for (var j = 1; j <= model.edges[i].length; j++) {
+		for (var j = 1; j <= model.edges.current[i].length; j++) {
 			xy = calcView(
-			    model.edges[i][j % model.edges[i].length].x + position.x - offset.x,
-			    model.edges[i][j % model.edges[i].length].y + position.y - offset.y,
-			    model.edges[i][j % model.edges[i].length].z + position.z - offset.z);
+			    model.edges.current[i][j % model.edges.current[i].length].x + position.x - offset.x,
+			    model.edges.current[i][j % model.edges.current[i].length].y + position.y - offset.y,
+			    model.edges.current[i][j % model.edges.current[i].length].z + position.z - offset.z);
 			context.lineTo(xy.x + offset.x, xy.y + offset.y);
 		}
 		context.stroke();
@@ -301,7 +301,7 @@ draw3dModel(model, position)
 function
 make3dModel(modelEdges)
 {
-	var model = {edges: modelEdges, normalVector: new Array(modelEdges.length)};
+	var model = {roll: 0, pitch: 0, yaw: 0, edges: {origin: modelEdges, current: modelEdges}, normalVector: new Array(modelEdges.length)};
 	// Compute normal vector
 	for (var i = 0; i < modelEdges.length; i++) {
 		model.normalVector[i] = calcNormalVector(modelEdges[i]);
@@ -450,21 +450,21 @@ rot_field_XYZ_onZ(x, y)
 }
 
 function
-rotate3d(x, y, yaw, XYZ)
+rotate3d(roll, pitch, yaw, XYZ)
 {
 	var ret = {x: 0, y: 0, z: 0};
 	ret.z =
-	    XYZ.z * Math.cos(2.0 * Math.PI * x / rot_degree) +
-	    XYZ.x * Math.sin(2.0 * Math.PI * x / rot_degree);
+	    XYZ.z * Math.cos(2.0 * Math.PI * roll / rot_degree) +
+	    XYZ.x * Math.sin(2.0 * Math.PI * roll / rot_degree);
 	XYZ.x =
-	    XYZ.x * Math.cos(2.0 * Math.PI * x / rot_degree) -
-	    XYZ.z * Math.sin(2.0 * Math.PI * x / rot_degree);
+	    XYZ.x * Math.cos(2.0 * Math.PI * roll / rot_degree) -
+	    XYZ.z * Math.sin(2.0 * Math.PI * roll/ rot_degree);
 	XYZ.z =
-	    ret.z * Math.cos(2.0 * Math.PI * y / rot_degree) +
-	    XYZ.y * Math.sin(2.0 * Math.PI * y / rot_degree);
+	    ret.z * Math.cos(2.0 * Math.PI * pitch / rot_degree) +
+	    XYZ.y * Math.sin(2.0 * Math.PI * pitch / rot_degree);
 	XYZ.y =
-	    XYZ.y * Math.cos(2.0 * Math.PI * y / rot_degree) -
-	    ret.z * Math.sin(2.0 * Math.PI * y / rot_degree);
+	    XYZ.y * Math.cos(2.0 * Math.PI * pitch / rot_degree) -
+	    ret.z * Math.sin(2.0 * Math.PI * pitch / rot_degree);
 	ret.x =
 	    XYZ.x * Math.cos(2.0 * Math.PI * yaw / rot_degree) -
 	    XYZ.y * Math.sin(2.0 * Math.PI * yaw / rot_degree);
@@ -475,13 +475,16 @@ rotate3d(x, y, yaw, XYZ)
 }
 
 function
-rotate3dModel(x, y, yaw, model)
+rotate3dModel(roll, pitch, yaw, model)
 {
-	for (var i = 0; i < model.edges.length; i++) {
-		for (var j = 0; j < model.edges[i].length; j++) {
-			model.edges[i][j] = rotate3d(x, y, yaw, model.edges[i][j]);
+	model.roll += roll;
+	model.pitch += pitch;
+	model.yaw += yaw;
+	for (var i = 0; i < model.edges.origin.length; i++) {
+		for (var j = 0; j < model.edges.origin[i].length; j++) {
+			model.edges.current[i][j] = rotate3d(roll, pitch, yaw, model.edges.origin[i][j]);
 		}
-		model.normalVector[i] = calcNormalVector(model.edges[i]);
+		model.normalVector[i] = calcNormalVector(model.edges.current[i]);
 	}
 }
 
