@@ -29,8 +29,9 @@ var prev_clientY = 0;
 
 // 3D model
 //var boatPosition = {x: braneSize.width * interval / 2.0, y: braneSize.height * interval / 2.0, z: 0};
-var boatPosition = {x: 200, y: 200, z: 0};
+var boatPosition = {x: 300, y: 300, z: 0};
 var boatVelocity = {x: 0, y: 0, z: 0};
+var boatVelocityRoll = {roll: 0, pitch: 0, yaw: 0};
 var boatMass = 4;
 var boat = make3dModel(
     [[{x:35, y:0, z:10}, {x:20, y:15, z:10}, {x:-20, y:15, z:10}, {x:-20, y:-15, z:10}, {x:20, y:-15, z:10}],
@@ -119,39 +120,53 @@ physics()
 }
 
 function
+braneAt(x, y)
+{
+	if (x < 0 || braneSize.width <= x || y <= 0 || braneSize.height <= y) {
+		return 0.0;
+	} else {
+		return brane[y * braneSize.width + x];
+	}
+}
+
+function
+braneInsideOrNot(x, y)
+{
+	if (x < 0 || braneSize.width <= x || y <= 0 || braneSize.height <= y) {
+		return false;
+	} else {
+		return true;
+	}
+}
+
+function
 physics_boat()
 {
 	var x = Math.floor(boatPosition.x / interval);
 	var y = Math.floor(boatPosition.y / interval);
-	if (0 <= x && x < braneSize.width && 0 <= y && y < braneSize.height) {
-		if (boatPosition.z > brane[y * braneSize.width + x]) { // Under the water
-			boatVelocity.z -= g * dt; // Gravity
-			boatVelocity.x *= 0.98;
-			boatVelocity.y *= 0.98;
-			boatVelocity.z *= 0.98;
-		} else {
-			boatVelocity.z += dt * f_float / boatMass; // Floating
-			boatVelocity.x *= 0.9;
-			boatVelocity.y *= 0.9;
-			boatVelocity.z *= 0.9;
-			brane[y * braneSize.width + x] -= boatMass * 0.3;
-		}
+	if (boatPosition.z > braneAt(x, y)) { // Under the water
+		boatVelocity.z -= g * dt; // Gravity
+		boatVelocity.x *= 0.98;
+		boatVelocity.y *= 0.98;
+		boatVelocity.z *= 0.98;
 	} else {
-		if (boatPosition.z > 0) { // Under the water
-			boatVelocity.z -= g * dt; // Gravity
-			boatVelocity.x *= 0.98;
-			boatVelocity.y *= 0.98;
-			boatVelocity.z *= 0.98;
-		} else {
-			boatVelocity.z += dt * f_float / boatMass; // Floating
-			boatVelocity.x *= 0.9;
-			boatVelocity.y *= 0.9;
-			boatVelocity.z *= 0.9;
+		boatVelocity.z += dt * f_float / boatMass; // Floating
+		boatVelocity.x *= 0.9;
+		boatVelocity.y *= 0.9;
+		boatVelocity.z *= 0.9;
+		boatVelocityRoll.roll = rot_degree / 20.0 * Math.atan2(braneAt(x, y + 1) - braneAt(x, y), interval) / Math.PI;
+		boatVelocityRoll.pitch = rot_degree / 20.0 * Math.atan2(braneAt(x + 1, y) - braneAt(x, y), interval) / Math.PI;
+		if (braneInsideOrNot(x, y)) {
+			brane[y * braneSize.width + x] -= boatMass * 0.3;
 		}
 	}
 	boatPosition.x += boatVelocity.x * dt;
 	boatPosition.y += boatVelocity.y * dt;
 	boatPosition.z += boatVelocity.z * dt;
+	boat.roll += boatVelocityRoll.roll * dt;
+	boat.pitch += boatVelocityRoll.pitch * dt;
+	boat.roll *= 0.98;
+	boat.pitch *= 0.98;
 }
 
 function
@@ -159,26 +174,10 @@ accel(i, j)
 {
 	var interest = brane[i * braneSize.width + j];
 	var a = 0.0;
-	if (i > 0) {
-		a += k_brane * (brane[(i - 1) * braneSize.width + j] - interest);
-	} else {
-		a += -k_brane * interest;
-	}
-	if (j > 0) {
-		a += k_brane * (brane[i * braneSize.width + j - 1] - interest);
-	} else {
-		a += -k_brane * interest;
-	}
-	if (i < braneSize.height - 1) {
-		a += k_brane * (brane[(i + 1) * braneSize.width + j] - interest);
-	} else {
-		a += -k_brane * interest;
-	}
-	if (j < braneSize.width - 1) {
-		a += k_brane * (brane[i * braneSize.width + j + 1] - interest);
-	} else {
-		a += -k_brane * interest;
-	}
+	a += k_brane * (braneAt(j, i - 1) - interest);
+	a += k_brane * (braneAt(j - 1, i) - interest);
+	a += k_brane * (braneAt(j, i + 1) - interest);
+	a += k_brane * (braneAt(j + 1, i) - interest);
 	return a;
 }
 
@@ -206,36 +205,36 @@ draw()
 	context.strokeStyle = 'blue';
 	for (i = 0; i < braneSize.height; i++) {
 		for (j = 1; j < braneSize.width; j++) {
-			amp = Math.round(2 * Math.max(Math.abs(brane[i * braneSize.width + j - 1]), Math.abs(brane[i * braneSize.width + j])));
+			amp = Math.round(2 * Math.max(Math.abs(braneAt(j - 1, i)), Math.abs(braneAt(j, i))));
 			context.strokeStyle = colormap[Math.min(colormap_quantize, amp)];
 			context.beginPath();
 			xy = calcView(
 			    (j - 1) * interval - offset.x,
 			    i * interval - offset.y,
-			    brane[i * braneSize.width + j - 1]);
+			    braneAt(j - 1, i));
 			context.moveTo(xy.x + offset.x, xy.y + offset.y);
 			xy = calcView(
 			    j * interval - offset.x,
 			    i * interval - offset.y,
-			    brane[i * braneSize.width + j]);
+			    braneAt(j, i));
 			context.lineTo(xy.x + offset.x, xy.y + offset.y);
 			context.stroke();
 		}
 	}
 	for (j = 0; j < braneSize.width; j++) {
 		for (i = 1; i < braneSize.height; i++) {
-			amp = Math.round(2 * Math.max(Math.abs(brane[(i - 1) * braneSize.width + j]), Math.abs(brane[i * braneSize.width + j])));
+			amp = Math.round(2 * Math.max(Math.abs(braneAt(j, i - 1)), Math.abs(braneAt(j, i))));
 			context.strokeStyle = colormap[Math.min(colormap_quantize, amp)];
 			context.beginPath();
 			xy = calcView(
 			    j * interval - offset.x,
 			    (i - 1) * interval - offset.y,
-			    brane[(i - 1) * braneSize.width + j]);
+			    braneAt(j, i - 1));
 			context.moveTo(xy.x + offset.x, xy.y + offset.y);
 			xy = calcView(
 			    j * interval - offset.x,
 			    i * interval - offset.y,
-			    brane[i * braneSize.width + j]);
+			    braneAt(j, i));
 			context.lineTo(xy.x + offset.x, xy.y + offset.y);
 			context.stroke();
 		}
@@ -273,10 +272,11 @@ draw()
 }
 
 function
-draw3dModel(model, position)
+draw3dModel(model, position, roll)
 {
 	var xy;
 	context.strokeStyle = "white";
+	rotate3dModel(model.roll, model.pitch, model.yaw, boat); // Rotate model
 	for (var i = 0; i < model.edges.current.length; i++) {
 		if (model.normalVector[i].x * field_XYZ.X.z + model.normalVector[i].y * field_XYZ.Y.z + model.normalVector[i].z * field_XYZ.Z.z > 0) {;
 			continue;
@@ -421,14 +421,14 @@ rot_field_XYZ(x, y)
 }
 
 function
-rot_field_XYZ_onZ(x, y)
+rot_field_XYZ_onZ(yaw, y)
 {
 	var X = {x: 0, y: 0, z: 0};
 	var Y = {x: 0, y: 0, z: 0};
 	X = field_XYZ.X;
 	Y = field_XYZ.Y;
-	var cos = Math.cos(2.0 * Math.PI * x / rot_degree);
-	var sin = Math.sin(2.0 * Math.PI * x / rot_degree);
+	var cos = Math.cos(2.0 * Math.PI * yaw / rot_degree);
+	var sin = Math.sin(2.0 * Math.PI * yaw / rot_degree);
 	if (field_XYZ.Z.y < 0.0) {
 		field_XYZ.X.x = X.x * cos + Y.x * sin;
 		field_XYZ.X.y = X.y * cos + Y.y * sin;
@@ -512,9 +512,6 @@ rotate3d(roll, pitch, yaw, XYZ)
 function
 rotate3dModel(roll, pitch, yaw, model)
 {
-	model.roll += roll;
-	model.pitch += pitch;
-	model.yaw += yaw;
 	for (var i = 0; i < model.edges.origin.length; i++) {
 		for (var j = 0; j < model.edges.origin[i].length; j++) {
 			model.edges.current[i][j] = rotate3d(model.roll, model.pitch, model.yaw, model.edges.origin[i][j]);
