@@ -33,12 +33,12 @@ var boatPosition = {x: 200, y: 200, z: 0};
 var boatVelocity = {x: 0, y: 0, z: 0};
 var boatMass = 4;
 var boat = make3dModel(
-    [[{x:0, y:35, z:10}, {x:-15, y:20, z:10}, {x:-15, y:-20, z:10}, {x:15, y:-20, z:10}, {x:15, y:20, z:10}],
-    [{x:0, y:35, z:10}, {x:0, y:20, z:-5}, {x:-15, y:20, z:10}],
-    [{x:0, y:35, z:10}, {x:15, y:20, z:10}, {x:0, y:20, z:-5}],
-    [{x:-15, y:20, z:10}, {x:0, y:20, z:-5}, {x:0, y:-20, z:-5}, {x:-15, y:-20, z:10}],
-    [{x:15, y:20, z:10}, {x:15, y:-20, z:10}, {x:0, y:-20, z:-5}, {x:0, y:20, z:-5}],
-    [{x:-15, y:-20, z:10}, {x:0, y:-20, z:-5}, {x:15, y:-20, z:10}]]);
+    [[{x:35, y:0, z:10}, {x:20, y:15, z:10}, {x:-20, y:15, z:10}, {x:-20, y:-15, z:10}, {x:20, y:-15, z:10}],
+    [{x:35, y:0, z:10}, {x:20, y:0, z:-5}, {x:20, y:15, z:10}],
+    [{x:35, y:0, z:10}, {x:20, y:-15, z:10}, {x:20, y:0, z:-5}],
+    [{x:20, y:15, z:10}, {x:20, y:0, z:-5}, {x:-20, y:0, z:-5}, {x:-20, y:15, z:10}],
+    [{x:20, y:-15, z:10}, {x:-20, y:-15, z:10}, {x:-20, y:0, z:-5}, {x:20, y:0, z:-5}],
+    [{x:-20, y:15, z:10}, {x:-20, y:0, z:-5}, {x:-20, y:-15, z:10}]]);
 
 
 
@@ -301,9 +301,15 @@ draw3dModel(model, position)
 function
 make3dModel(modelEdges)
 {
-	var model = {roll: 0, pitch: 0, yaw: 0, edges: {origin: modelEdges, current: modelEdges}, normalVector: new Array(modelEdges.length)};
+	var model = {roll: 0, pitch: 0, yaw: 0, edges: {origin: new Array(modelEdges.length), current: new Array(modelEdges.length)}, normalVector: new Array(modelEdges.length)};
 	// Compute normal vector
 	for (var i = 0; i < modelEdges.length; i++) {
+		model.edges.origin[i] = new Array(modelEdges[i].length);
+		model.edges.current[i] = new Array(modelEdges[i].length);
+		for (var j = 0; j < modelEdges[i].length; j++) {
+			model.edges.origin[i][j] = modelEdges[i][j];
+			model.edges.current[i][j] = modelEdges[i][j];
+		}
 		model.normalVector[i] = calcNormalVector(modelEdges[i]);
 	}
 	return model;
@@ -452,26 +458,55 @@ rot_field_XYZ_onZ(x, y)
 function
 rotate3d(roll, pitch, yaw, XYZ)
 {
-	var ret = {x: 0, y: 0, z: 0};
-	ret.z =
-	    XYZ.z * Math.cos(2.0 * Math.PI * roll / rot_degree) +
-	    XYZ.x * Math.sin(2.0 * Math.PI * roll / rot_degree);
-	XYZ.x =
-	    XYZ.x * Math.cos(2.0 * Math.PI * roll / rot_degree) -
-	    XYZ.z * Math.sin(2.0 * Math.PI * roll/ rot_degree);
-	XYZ.z =
-	    ret.z * Math.cos(2.0 * Math.PI * pitch / rot_degree) +
-	    XYZ.y * Math.sin(2.0 * Math.PI * pitch / rot_degree);
-	XYZ.y =
-	    XYZ.y * Math.cos(2.0 * Math.PI * pitch / rot_degree) -
-	    ret.z * Math.sin(2.0 * Math.PI * pitch / rot_degree);
-	ret.x =
+	var di_r = {x: 0, y: 0, z: 0};
+	var di_p = {x: 0, y: 0, z: 0};
+	var di_y = {x: 0, y: 0, z: 0};
+	var di_py = {x: 0, y: 0, z: 0};
+	var di = {x: 0, y: 0, z: 0};
+	// Yaw
+	di_y.x =
 	    XYZ.x * Math.cos(2.0 * Math.PI * yaw / rot_degree) -
-	    XYZ.y * Math.sin(2.0 * Math.PI * yaw / rot_degree);
-	ret.y =
+	    XYZ.y * Math.sin(2.0 * Math.PI * yaw / rot_degree) -
+	    XYZ.x;
+	di_y.y =
 	    XYZ.y * Math.cos(2.0 * Math.PI * yaw / rot_degree) +
-	    XYZ.x * Math.sin(2.0 * Math.PI * yaw / rot_degree);
-	return ret;
+	    XYZ.x * Math.sin(2.0 * Math.PI * yaw / rot_degree) -
+	    XYZ.y;
+	// Pitch
+	di_p.x =
+	    XYZ.x * Math.cos(2.0 * Math.PI * pitch / rot_degree) -
+	    XYZ.z * Math.sin(2.0 * Math.PI * pitch / rot_degree) -
+	    XYZ.x;
+	di_p.z =
+	    XYZ.z * Math.cos(2.0 * Math.PI * pitch / rot_degree) +
+	    XYZ.x * Math.sin(2.0 * Math.PI * pitch / rot_degree) -
+	    XYZ.z;
+	di_py.x =
+	    di_p.x +
+	    di_y.x * Math.cos(2.0 * Math.PI * pitch / rot_degree);
+	di_py.y = di_y.y;
+	di_py.z =
+	    di_p.z +
+	    di_y.x * Math.sin(2.0 * Math.PI * pitch / rot_degree);
+	// Roll
+	di_r.y =
+	    XYZ.y * Math.cos(2.0 * Math.PI * roll / rot_degree) -
+	    XYZ.z * Math.sin(2.0 * Math.PI * roll/ rot_degree) -
+	    XYZ.y;
+	di_r.z =
+	    XYZ.z * Math.cos(2.0 * Math.PI * roll / rot_degree) +
+	    XYZ.y * Math.sin(2.0 * Math.PI * roll / rot_degree) -
+	    XYZ.z;
+	di.x = di_py.x;
+	di.y =
+	    di_r.y +
+	    di_py.y * Math.cos(2.0 * Math.PI * roll / rot_degree) -
+	    di_py.z * Math.sin(2.0 * Math.PI * roll/ rot_degree);
+	di.z =
+	    di_r.z +
+	    di_py.z * Math.cos(2.0 * Math.PI * roll / rot_degree) +
+	    di_py.y * Math.sin(2.0 * Math.PI * roll / rot_degree);
+	return {x: XYZ.x + di.x, y: XYZ.y + di.y, z: XYZ.z + di.z};
 }
 
 function
@@ -482,7 +517,7 @@ rotate3dModel(roll, pitch, yaw, model)
 	model.yaw += yaw;
 	for (var i = 0; i < model.edges.origin.length; i++) {
 		for (var j = 0; j < model.edges.origin[i].length; j++) {
-			model.edges.current[i][j] = rotate3d(roll, pitch, yaw, model.edges.origin[i][j]);
+			model.edges.current[i][j] = rotate3d(model.roll, model.pitch, model.yaw, model.edges.origin[i][j]);
 		}
 		model.normalVector[i] = calcNormalVector(model.edges.current[i]);
 	}
