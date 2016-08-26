@@ -162,11 +162,13 @@ physics_boat()
 		var z_axis = rotate3d(boat.roll, boat.pitch, boat.yaw, {x:0, y:0, z:1});
 		boatVelocityRoll.roll += rot_degree / 40.0 *
 		    (Math.atan2(z_axis.z * (x_diff * y_axis.x + y_diff * y_axis.y - y_axis.z * interval), interval) / Math.PI -
-		    0.25 * Math.sin(2.0 * Math.PI * boat.roll / rot_degree) * Math.cos(Math.asin(x_axis.z))) /
+		    0.25 * Math.sin(2.0 * Math.PI * boat.roll / rot_degree) *
+		    Math.cos(x_axis.z < 1.0 ? x_axis.z > -1.0 ? Math.asin(x_axis.z) : -0.5 * Math.PI : 0.5 * Math.PI)) /
 		    boatMass;
 		boatVelocityRoll.pitch += rot_degree / 40.0 *
 		    (-Math.atan2(z_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / Math.PI -
-		    0.25 * Math.sin(2.0 * Math.PI * boat.pitch / rot_degree) * Math.cos(Math.asin(y_axis.z))) /
+		    0.25 * Math.sin(2.0 * Math.PI * boat.pitch / rot_degree) *
+		    Math.cos(y_axis.z < 1.0 ? y_axis.z > -1.0 ? Math.asin(y_axis.z): -0.25 * Math.PI : 0.25 * Math.PI)) /
 		    boatMass;
 		boatVelocityRoll.yaw += rot_degree / 40.0 *
 		    Math.atan2(y_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / Math.PI /
