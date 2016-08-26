@@ -160,9 +160,17 @@ physics_boat()
 		var x_axis = rotate3d(boat.roll, boat.pitch, boat.yaw, {x:1, y:0, z:0});
 		var y_axis = rotate3d(boat.roll, boat.pitch, boat.yaw, {x:0, y:1, z:0});
 		var z_axis = rotate3d(boat.roll, boat.pitch, boat.yaw, {x:0, y:0, z:1});
-		boatVelocityRoll.roll += rot_degree / 40.0 * Math.atan2(z_axis.z * (x_diff * y_axis.x + y_diff * y_axis.y - y_axis.z * interval), interval) / Math.PI;
-		boatVelocityRoll.pitch += rot_degree / 40.0 * Math.atan2(z_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / Math.PI;
-		boatVelocityRoll.yaw += rot_degree / 40.0 * Math.atan2(y_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / Math.PI;
+		boatVelocityRoll.roll += rot_degree / 40.0 *
+		    (Math.atan2(z_axis.z * (x_diff * y_axis.x + y_diff * y_axis.y - y_axis.z * interval), interval) / Math.PI -
+		    Math.sin(2.0 * Math.PI * boat.roll / rot_degree) * Math.cos(Math.asin(x_axis.z))) /
+		    boatMass;
+		boatVelocityRoll.pitch += rot_degree / 40.0 *
+		    (-Math.atan2(z_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / Math.PI -
+		    Math.sin(2.0 * Math.PI * boat.pitch / rot_degree) * Math.cos(Math.asin(y_axis.z))) /
+		    boatMass;
+		boatVelocityRoll.yaw += rot_degree / 40.0 *
+		    Math.atan2(y_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / Math.PI /
+		    boatMass;
 		if (braneInsideOrNot(x, y)) {
 			brane[y * braneSize.width + x] -= boatMass * 0.3;
 		}
@@ -481,11 +489,11 @@ rotate3d(roll, pitch, yaw, XYZ)
 	    XYZ.y;
 	// Pitch
 	di_p.x =
-	    XYZ.x * Math.cos(2.0 * Math.PI * pitch / rot_degree) -
+	    XYZ.x * Math.cos(2.0 * Math.PI * pitch / rot_degree) +
 	    XYZ.z * Math.sin(2.0 * Math.PI * pitch / rot_degree) -
 	    XYZ.x;
 	di_p.z =
-	    XYZ.z * Math.cos(2.0 * Math.PI * pitch / rot_degree) +
+	    XYZ.z * Math.cos(2.0 * Math.PI * pitch / rot_degree) -
 	    XYZ.x * Math.sin(2.0 * Math.PI * pitch / rot_degree) -
 	    XYZ.z;
 	di_py.x =
