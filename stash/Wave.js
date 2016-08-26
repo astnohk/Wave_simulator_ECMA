@@ -180,8 +180,10 @@ physics_boat()
 	boatPosition.z += boatVelocity.z * dt;
 	boat.roll += boatVelocityRoll.roll * dt;
 	boat.pitch += boatVelocityRoll.pitch * dt;
-	boat.roll *= 0.98;
-	boat.pitch *= 0.98;
+	boat.yaw += boatVelocityRoll.yaw * dt;
+	boatVelocityRoll.roll *= 0.98;
+	boatVelocityRoll.pitch *= 0.98;
+	boatVelocityRoll.yaw *= 0.98;
 }
 
 function
