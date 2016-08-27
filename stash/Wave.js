@@ -19,27 +19,27 @@ var interval = 30; // drawing interval pixels
 var rainThreshold = 0.1;
 
 var field_XYZ = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
-var offset = {x: 0, y: 0, z: 0};
+var view_offset = {x: 0, y: 0, z: 0};
+var display_offset = {x: 0, y: 0, z: 0};
 var rot_degree = 3600;
 var colormap_quantize = 200;
-var colormap = new Array(colormap_quantize);
+var colormap = {current: [], normal: new Array(colormap_quantize), bluesea: new Array(colormap_quantize)};
 
 var prev_clientX = 0;
 var prev_clientY = 0;
 
-// 3D model
-//var boatPosition = {x: braneSize.width * interval / 2.0, y: braneSize.height * interval / 2.0, z: 0};
-var boatPosition = {x: 300, y: 300, z: 0};
-var boatVelocity = {x: 0, y: 0, z: 0};
-var boatVelocityRoll = {roll: 0, pitch: 0, yaw: 0};
+// 3D object
+var listObjects = new Array();
+var boatPositionInitial = {x: 300, y: 300, z: 0};
 var boatMass = 4;
-var boat = make3dModel(
+var boat;
+var boatEdges =
     [[{x:35, y:0, z:10}, {x:20, y:15, z:10}, {x:-20, y:15, z:10}, {x:-20, y:-15, z:10}, {x:20, y:-15, z:10}],
     [{x:35, y:0, z:10}, {x:20, y:0, z:-5}, {x:20, y:15, z:10}],
     [{x:35, y:0, z:10}, {x:20, y:-15, z:10}, {x:20, y:0, z:-5}],
     [{x:20, y:15, z:10}, {x:20, y:0, z:-5}, {x:-20, y:0, z:-5}, {x:-20, y:15, z:10}],
     [{x:20, y:-15, z:10}, {x:-20, y:-15, z:10}, {x:-20, y:0, z:-5}, {x:20, y:0, z:-5}],
-    [{x:-20, y:15, z:10}, {x:-20, y:0, z:-5}, {x:-20, y:-15, z:10}]]);
+    [{x:-20, y:15, z:10}, {x:-20, y:0, z:-5}, {x:-20, y:-15, z:10}]];
 
 
 
@@ -54,6 +54,7 @@ init()
 {
 	// Make colormap
 	makeColormap();
+	colormap.current = colormap.bluesea;
 	// Initialize brane
 	for (var i = 0; i < braneSize.height; i++) {
 		for (var j = 0; j < braneSize.width; j++) {
@@ -63,14 +64,17 @@ init()
 		}
 	}
 	// Set view offset
-	offset.x = braneSize.width * interval / 2.0
-	offset.y = braneSize.height * interval / 2.0
+	view_offset.x = braneSize.width * interval / 2.0
+	view_offset.y = braneSize.height * interval / 2.0
+	// Set display offset
+	display_offset.x = braneSize.width * interval / 2.0
+	display_offset.y = braneSize.height * interval / 2.0
 	// Initialize canvas
 	canvas = document.getElementById("mainPool");
 	canvas.addEventListener("mousedown", mouseClick, false);
-	canvas.addEventListener("mousemove", mouseRotation, false);
+	canvas.addEventListener("mousemove", mouseMove, false);
 	canvas.addEventListener("touchstart", mouseClick, false);
-	canvas.addEventListener("touchmove", mouseRotation, false);
+	canvas.addEventListener("touchmove", mouseMove, false);
 	context = canvas.getContext("2d");
 	// Adjust initial view rotation
 	rot_field_XYZ(0, 1350);
@@ -85,6 +89,10 @@ init()
 			    rainThreshold += rainThreshold < 1.0 ? 0.001 : 0.0;
 		    }
 	    }, 50);
+	// Make 3D object
+	boat = make3dObject(boatEdges, boatPositionInitial, {roll: 0, pitch: 0, yaw: 0}, {x: 0, y: 0, z: 0}, {roll: 0, pitch: 0, yaw: 0}, boatMass);
+	// Add 3D objects to list
+	listObjects.push(boat);
 }
 
 
@@ -96,9 +104,9 @@ loop()
 {
 	physics();
 	draw();
-	// Draw 3D model
-	physics_boat();
-	draw3dModel(boat, boatPosition);
+	// Draw 3D object
+	physicsObjects();
+	draw3dObjects();
 }
 
 
@@ -152,50 +160,58 @@ asin(y)
 }
 
 function
-physics_boat()
+physicsObjects()
 {
-	var x = Math.floor(boatPosition.x / interval);
-	var y = Math.floor(boatPosition.y / interval);
-	if (boatPosition.z > braneAt(x, y)) { // Under the water
-		boatVelocity.z -= g * dt; // Gravity
-		boatVelocity.x *= 0.98;
-		boatVelocity.y *= 0.98;
-		boatVelocity.z *= 0.98;
+	for (var i = 0; i < listObjects.length; i++) {
+		physicsObject(listObjects[i]);
+	}
+}
+
+function
+physicsObject(object)
+{
+	var x = Math.floor(object.x / interval);
+	var y = Math.floor(object.y / interval);
+	if (object.z > braneAt(x, y)) { // Under the water
+		object.velocity.z -= g * dt; // Gravity
+		object.velocity.x *= 0.98;
+		object.velocity.y *= 0.98;
+		object.velocity.z *= 0.98;
 	} else {
-		boatVelocity.z += dt * f_float / boatMass; // Floating
-		boatVelocity.x *= 0.9;
-		boatVelocity.y *= 0.9;
-		boatVelocity.z *= 0.9;
+		object.velocity.z += f_float / object.mass * dt; // Floating
+		object.velocity.x *= 0.9;
+		object.velocity.y *= 0.9;
+		object.velocity.z *= 0.9;
 		// Rolling
 		var x_diff = braneAt(x + 1, y) - braneAt(x, y);
 		var y_diff = braneAt(x, y + 1) - braneAt(x, y);
-		var x_axis = rotate3d(boat.roll, boat.pitch, boat.yaw, {x:1, y:0, z:0});
-		var y_axis = rotate3d(boat.roll, boat.pitch, boat.yaw, {x:0, y:1, z:0});
-		var z_axis = rotate3d(boat.roll, boat.pitch, boat.yaw, {x:0, y:0, z:1});
-		boatVelocityRoll.roll += rot_degree / 40.0 *
+		var x_axis = rotate3d(object.roll, object.pitch, object.yaw, {x:1, y:0, z:0});
+		var y_axis = rotate3d(object.roll, object.pitch, object.yaw, {x:0, y:1, z:0});
+		var z_axis = rotate3d(object.roll, object.pitch, object.yaw, {x:0, y:0, z:1});
+		object.velocityRolling.roll += rot_degree / 40.0 *
 		    (Math.atan2(z_axis.z * (x_diff * y_axis.x + y_diff * y_axis.y - y_axis.z * interval), interval) / Math.PI -
-		    0.25 * Math.sin(2.0 * Math.PI * boat.roll / rot_degree) * Math.cos(asin(x_axis.z))) /
-		    boatMass;
-		boatVelocityRoll.pitch += rot_degree / 40.0 *
+		    0.25 * Math.sin(2.0 * Math.PI * object.roll / rot_degree) * Math.cos(asin(x_axis.z))) /
+		    object.mass;
+		object.velocityRolling.pitch += rot_degree / 40.0 *
 		    (-Math.atan2(z_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / Math.PI -
-		    0.25 * Math.sin(2.0 * Math.PI * boat.pitch / rot_degree) * Math.cos(asin(y_axis.z))) /
-		    boatMass;
-		boatVelocityRoll.yaw += rot_degree / 40.0 *
+		    0.25 * Math.sin(2.0 * Math.PI * object.pitch / rot_degree) * Math.cos(asin(y_axis.z))) /
+		    object.mass;
+		object.velocityRolling.yaw += rot_degree / 40.0 *
 		    Math.atan2(y_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / Math.PI /
-		    boatMass;
+		    object.mass;
 		if (braneInsideOrNot(x, y)) {
-			brane[y * braneSize.width + x] -= boatMass * 0.3;
+			brane[y * braneSize.width + x] -= object.mass * 0.3;
 		}
+		object.velocityRolling.roll *= 0.98;
+		object.velocityRolling.pitch *= 0.98;
+		object.velocityRolling.yaw *= 0.98;
 	}
-	boatPosition.x += boatVelocity.x * dt;
-	boatPosition.y += boatVelocity.y * dt;
-	boatPosition.z += boatVelocity.z * dt;
-	boat.roll += boatVelocityRoll.roll * dt;
-	boat.pitch += boatVelocityRoll.pitch * dt;
-	boat.yaw += boatVelocityRoll.yaw * dt;
-	boatVelocityRoll.roll *= 0.98;
-	boatVelocityRoll.pitch *= 0.98;
-	boatVelocityRoll.yaw *= 0.98;
+	object.x += object.velocity.x * dt;
+	object.y += object.velocity.y * dt;
+	object.z += object.velocity.z * dt;
+	object.roll += object.velocityRolling.roll * dt;
+	object.pitch += object.velocityRolling.pitch * dt;
+	object.yaw += object.velocityRolling.yaw * dt;
 }
 
 function
@@ -215,11 +231,16 @@ makeColormap()
 {
 	var dc = Math.ceil(255 / (colormap_quantize / 2));
 	var i;
+	// Make colormap normal
 	for (i = 0; i <= Math.floor(colormap_quantize / 2); i++) {
-		colormap[i] = 'rgb(0,' + Math.min(255, dc * i) + ',' + Math.max(0, 255 - dc * i) + ')';
+		colormap.normal[i] = 'rgb(0,' + Math.min(255, dc * i) + ',' + Math.max(0, 255 - dc * i) + ')';
 	}
 	for (i = Math.floor(colormap_quantize / 2); i < colormap_quantize; i++) {
-		colormap[i] = 'rgb(' + Math.min(255, dc * i) + ',' + Math.max(0, 255 - dc * i) + ',0)';
+		colormap.normal[i] = 'rgb(' + Math.min(255, dc * i) + ',' + Math.max(0, 255 - dc * i) + ',0)';
+	}
+	// Make colormap bluesea
+	for (i = 0; i < colormap_quantize; i++) {
+		colormap.bluesea[i] = 'rgb(0,' + Math.min(255, dc * i) + ',255)';
 	}
 }
 
@@ -235,36 +256,36 @@ draw()
 	for (i = 0; i < braneSize.height; i++) {
 		for (j = 1; j < braneSize.width; j++) {
 			amp = Math.round(2 * Math.max(Math.abs(braneAt(j - 1, i)), Math.abs(braneAt(j, i))));
-			context.strokeStyle = colormap[Math.min(colormap_quantize, amp)];
+			context.strokeStyle = colormap.current[Math.min(colormap_quantize, amp)];
 			context.beginPath();
 			xy = calcView(
-			    (j - 1) * interval - offset.x,
-			    i * interval - offset.y,
+			    (j - 1) * interval - view_offset.x,
+			    i * interval - view_offset.y,
 			    braneAt(j - 1, i));
-			context.moveTo(xy.x + offset.x, xy.y + offset.y);
+			context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			xy = calcView(
-			    j * interval - offset.x,
-			    i * interval - offset.y,
+			    j * interval - view_offset.x,
+			    i * interval - view_offset.y,
 			    braneAt(j, i));
-			context.lineTo(xy.x + offset.x, xy.y + offset.y);
+			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			context.stroke();
 		}
 	}
 	for (j = 0; j < braneSize.width; j++) {
 		for (i = 1; i < braneSize.height; i++) {
 			amp = Math.round(2 * Math.max(Math.abs(braneAt(j, i - 1)), Math.abs(braneAt(j, i))));
-			context.strokeStyle = colormap[Math.min(colormap_quantize, amp)];
+			context.strokeStyle = colormap.current[Math.min(colormap_quantize, amp)];
 			context.beginPath();
 			xy = calcView(
-			    j * interval - offset.x,
-			    (i - 1) * interval - offset.y,
+			    j * interval - view_offset.x,
+			    (i - 1) * interval - view_offset.y,
 			    braneAt(j, i - 1));
-			context.moveTo(xy.x + offset.x, xy.y + offset.y);
+			context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			xy = calcView(
-			    j * interval - offset.x,
-			    i * interval - offset.y,
+			    j * interval - view_offset.x,
+			    i * interval - view_offset.y,
 			    braneAt(j, i));
-			context.lineTo(xy.x + offset.x, xy.y + offset.y);
+			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			context.stroke();
 		}
 	}
@@ -301,47 +322,55 @@ draw()
 }
 
 function
-draw3dModel(model, position, roll)
+draw3dObjects()
+{
+	for (var i = 0; i < listObjects.length; i++) {
+		draw3dObject(listObjects[i]);
+	}
+}
+
+function
+draw3dObject(object)
 {
 	var xy;
 	context.strokeStyle = "white";
-	rotate3dModel(model.roll, model.pitch, model.yaw, boat); // Rotate model
-	for (var i = 0; i < model.edges.current.length; i++) {
-		if (model.normalVector[i].x * field_XYZ.X.z + model.normalVector[i].y * field_XYZ.Y.z + model.normalVector[i].z * field_XYZ.Z.z > 0) {;
+	rotate3dObject(object.roll, object.pitch, object.yaw, boat); // Rotate object
+	for (var i = 0; i < object.edges.current.length; i++) {
+		if (object.normalVector[i].x * field_XYZ.X.z + object.normalVector[i].y * field_XYZ.Y.z + object.normalVector[i].z * field_XYZ.Z.z > 0) {;
 			continue;
 		}
 		context.beginPath();
 		xy = calcView(
-		    model.edges.current[i][0].x + position.x - offset.x,
-		    model.edges.current[i][0].y + position.y - offset.y,
-		    model.edges.current[i][0].z + position.z - offset.z);
-		context.moveTo(xy.x + offset.x, xy.y + offset.y);
-		for (var j = 1; j <= model.edges.current[i].length; j++) {
+		    object.edges.current[i][0].x + object.x - view_offset.x,
+		    object.edges.current[i][0].y + object.y - view_offset.y,
+		    object.edges.current[i][0].z + object.z - view_offset.z);
+		context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
+		for (var j = 1; j <= object.edges.current[i].length; j++) {
 			xy = calcView(
-			    model.edges.current[i][j % model.edges.current[i].length].x + position.x - offset.x,
-			    model.edges.current[i][j % model.edges.current[i].length].y + position.y - offset.y,
-			    model.edges.current[i][j % model.edges.current[i].length].z + position.z - offset.z);
-			context.lineTo(xy.x + offset.x, xy.y + offset.y);
+			    object.edges.current[i][j % object.edges.current[i].length].x + object.x - view_offset.x,
+			    object.edges.current[i][j % object.edges.current[i].length].y + object.y - view_offset.y,
+			    object.edges.current[i][j % object.edges.current[i].length].z + object.z - view_offset.z);
+			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
 		}
 		context.stroke();
 	}
 }
 
 function
-make3dModel(modelEdges)
+make3dObject(objectEdges, position, rolling, velocity, velocityRolling, mass)
 {
-	var model = {roll: 0, pitch: 0, yaw: 0, edges: {origin: new Array(modelEdges.length), current: new Array(modelEdges.length)}, normalVector: new Array(modelEdges.length)};
+	var object = {x: position.x, y: position.y, z: position.z, roll: rolling.roll, pitch: rolling.pitch, yaw: rolling.yaw, edges: {origin: new Array(objectEdges.length), current: new Array(objectEdges.length)}, normalVector: new Array(objectEdges.length), velocity: velocity, velocityRolling: velocityRolling, mass: mass};
 	// Compute normal vector
-	for (var i = 0; i < modelEdges.length; i++) {
-		model.edges.origin[i] = new Array(modelEdges[i].length);
-		model.edges.current[i] = new Array(modelEdges[i].length);
-		for (var j = 0; j < modelEdges[i].length; j++) {
-			model.edges.origin[i][j] = modelEdges[i][j];
-			model.edges.current[i][j] = modelEdges[i][j];
+	for (var i = 0; i < objectEdges.length; i++) {
+		object.edges.origin[i] = new Array(objectEdges[i].length);
+		object.edges.current[i] = new Array(objectEdges[i].length);
+		for (var j = 0; j < objectEdges[i].length; j++) {
+			object.edges.origin[i][j] = objectEdges[i][j];
+			object.edges.current[i][j] = objectEdges[i][j];
 		}
-		model.normalVector[i] = calcNormalVector(modelEdges[i]);
+		object.normalVector[i] = calcNormalVector(objectEdges[i]);
 	}
-	return model;
+	return object;
 }
 
 function
@@ -539,13 +568,13 @@ rotate3d(roll, pitch, yaw, XYZ)
 }
 
 function
-rotate3dModel(roll, pitch, yaw, model)
+rotate3dObject(roll, pitch, yaw, object)
 {
-	for (var i = 0; i < model.edges.origin.length; i++) {
-		for (var j = 0; j < model.edges.origin[i].length; j++) {
-			model.edges.current[i][j] = rotate3d(model.roll, model.pitch, model.yaw, model.edges.origin[i][j]);
+	for (var i = 0; i < object.edges.origin.length; i++) {
+		for (var j = 0; j < object.edges.origin[i].length; j++) {
+			object.edges.current[i][j] = rotate3d(object.roll, object.pitch, object.yaw, object.edges.origin[i][j]);
 		}
-		model.normalVector[i] = calcNormalVector(model.edges.current[i]);
+		object.normalVector[i] = calcNormalVector(object.edges.current[i]);
 	}
 }
 
@@ -563,15 +592,22 @@ mouseClick(event)
 }
 
 function
-mouseRotation(event)
+mouseMove(event)
 {
 	event.preventDefault();
-	if (event.type === "mousemove" && event.buttons & 1 != 0) {
-		rot_field_XYZ_onZ(event.clientX - prev_clientX, event.clientY - prev_clientY);
+	if (event.type === "mousemove") {
+		if ((event.buttons & 1) != 0) {
+			rot_field_XYZ_onZ(event.clientX - prev_clientX, event.clientY - prev_clientY);
+		} else if ((event.buttons & 4) != 0) {
+			view_offset.x += event.clientX - prev_clientX;
+			view_offset.y += event.clientY - prev_clientY;
+		}
 		prev_clientX = event.clientX;
 		prev_clientY = event.clientY;
-	} else if (event.type === "touchmove" && event.touches.length == 1) {
-		rot_field_XYZ_onZ(event.touches[0].clientX - prev_clientX, event.touches[0].clientY - prev_clientY);
+	} else if (event.type === "touchmove") {
+		if (event.touches.length == 1) {
+			rot_field_XYZ_onZ(event.touches[0].clientX - prev_clientX, event.touches[0].clientY - prev_clientY);
+		}
 		prev_clientX = event.touches[0].clientX;
 		prev_clientY = event.touches[0].clientY;
 	}
