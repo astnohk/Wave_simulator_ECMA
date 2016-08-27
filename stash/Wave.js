@@ -183,31 +183,27 @@ physicsObjects()
 function
 physicsObject(object)
 {
-	var x = Math.floor(object.x / interval);
-	var y = Math.floor(object.y / interval);
-	if (object.z > braneAt(x, y)) { // Under the water
+	var x = Math.floor(object.position.x / interval);
+	var y = Math.floor(object.position.y / interval);
+	var dampingVelocity = 0.98;
+	if (object.position.z > braneAt(x, y)) { // Under the water
 		object.velocity.z -= g * dt; // Gravity
-		object.velocity.x *= 0.98;
-		object.velocity.y *= 0.98;
-		object.velocity.z *= 0.98;
 	} else {
 		object.velocity.z += f_float / object.mass * dt; // Floating
-		object.velocity.x *= 0.9;
-		object.velocity.y *= 0.9;
-		object.velocity.z *= 0.9;
+		dampingVelocity = 0.9;
 		// Rolling
 		var x_diff = braneAt(x + 1, y) - braneAt(x, y);
 		var y_diff = braneAt(x, y + 1) - braneAt(x, y);
-		var x_axis = rotate3d(object.roll, object.pitch, object.yaw, {x:1, y:0, z:0});
-		var y_axis = rotate3d(object.roll, object.pitch, object.yaw, {x:0, y:1, z:0});
-		var z_axis = rotate3d(object.roll, object.pitch, object.yaw, {x:0, y:0, z:1});
+		var x_axis = rotate3d(object.rolling, {x:1, y:0, z:0});
+		var y_axis = rotate3d(object.rolling, {x:0, y:1, z:0});
+		var z_axis = rotate3d(object.rolling, {x:0, y:0, z:1});
 		object.velocityRolling.roll += rot_degree / 40.0 *
 		    (Math.atan2(z_axis.z * (x_diff * y_axis.x + y_diff * y_axis.y - y_axis.z * interval), interval) / Math.PI -
-		    0.25 * Math.sin(2.0 * Math.PI * object.roll / rot_degree) * Math.cos(asin(x_axis.z))) /
+		    0.25 * Math.sin(2.0 * Math.PI * object.rolling.roll / rot_degree) * Math.cos(asin(x_axis.z))) /
 		    object.mass;
 		object.velocityRolling.pitch += rot_degree / 40.0 *
 		    (-Math.atan2(z_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / Math.PI -
-		    0.25 * Math.sin(2.0 * Math.PI * object.pitch / rot_degree) * Math.cos(asin(y_axis.z))) /
+		    0.25 * Math.sin(2.0 * Math.PI * object.rolling.pitch / rot_degree) * Math.cos(asin(y_axis.z))) /
 		    object.mass;
 		object.velocityRolling.yaw += rot_degree / 40.0 *
 		    Math.atan2(y_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / Math.PI /
@@ -215,16 +211,20 @@ physicsObject(object)
 		if (braneInsideOrNot(x, y)) {
 			brane[y * braneSize.width + x] -= object.mass * 0.3;
 		}
-		object.velocityRolling.roll *= 0.98;
-		object.velocityRolling.pitch *= 0.98;
-		object.velocityRolling.yaw *= 0.98;
 	}
-	object.x += object.velocity.x * dt;
-	object.y += object.velocity.y * dt;
-	object.z += object.velocity.z * dt;
-	object.roll += object.velocityRolling.roll * dt;
-	object.pitch += object.velocityRolling.pitch * dt;
-	object.yaw += object.velocityRolling.yaw * dt;
+	object.position.x += object.velocity.x * dt;
+	object.position.y += object.velocity.y * dt;
+	object.position.z += object.velocity.z * dt;
+	object.velocity.x *= dampingVelocity;
+	object.velocity.y *= dampingVelocity;
+	object.velocity.z *= dampingVelocity;
+	object.rolling.roll += object.velocityRolling.roll * dt;
+	object.rolling.pitch += object.velocityRolling.pitch * dt;
+	object.rolling.yaw += object.velocityRolling.yaw * dt;
+	object.velocityRolling.roll *= dampingVelocity;
+	object.velocityRolling.pitch *= dampingVelocity;
+	object.velocityRolling.yaw *= dampingVelocity;
+	rotate3dObject(object); // Rotate object
 }
 
 function
@@ -262,12 +262,12 @@ drawBrane()
 			xy = calcView(
 			    (x - 1) * interval - view_offset.x,
 			    y * interval - view_offset.y,
-			    braneAt(x - 1, y));
+			    braneAt(x - 1, y) - view_offset.z);
 			context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			xy = calcView(
 			    x * interval - view_offset.x,
 			    y * interval - view_offset.y,
-			    braneAt(x, y));
+			    braneAt(x, y) - view_offset.z);
 			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			context.stroke();
 		}
@@ -280,12 +280,12 @@ drawBrane()
 			xy = calcView(
 			    x * interval - view_offset.x,
 			    (y - 1) * interval - view_offset.y,
-			    braneAt(x, y - 1));
+			    braneAt(x, y - 1) - view_offset.z);
 			context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			xy = calcView(
 			    x * interval - view_offset.x,
 			    y * interval - view_offset.y,
-			    braneAt(x, y));
+			    braneAt(x, y) - view_offset.z);
 			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			context.stroke();
 		}
@@ -340,22 +340,22 @@ draw3dObject(object)
 {
 	var xy;
 	context.strokeStyle = "white";
-	rotate3dObject(object.roll, object.pitch, object.yaw, boat); // Rotate object
 	for (var i = 0; i < object.edges.current.length; i++) {
-		if (object.normalVector[i].x * field_XYZ.X.z + object.normalVector[i].y * field_XYZ.Y.z + object.normalVector[i].z * field_XYZ.Z.z > 0) {;
+		if (object.edges.current.length > 1 &&
+		    object.normalVector[i].x * field_XYZ.X.z + object.normalVector[i].y * field_XYZ.Y.z + object.normalVector[i].z * field_XYZ.Z.z > 0) {;
 			continue;
 		}
 		context.beginPath();
 		xy = calcView(
-		    object.edges.current[i][0].x + object.x - view_offset.x,
-		    object.edges.current[i][0].y + object.y - view_offset.y,
-		    object.edges.current[i][0].z + object.z - view_offset.z);
+		    object.edges.current[i][0].x + object.position.x - view_offset.x,
+		    object.edges.current[i][0].y + object.position.y - view_offset.y,
+		    object.edges.current[i][0].z + object.position.z - view_offset.z);
 		context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
 		for (var j = 1; j <= object.edges.current[i].length; j++) {
 			xy = calcView(
-			    object.edges.current[i][j % object.edges.current[i].length].x + object.x - view_offset.x,
-			    object.edges.current[i][j % object.edges.current[i].length].y + object.y - view_offset.y,
-			    object.edges.current[i][j % object.edges.current[i].length].z + object.z - view_offset.z);
+			    object.edges.current[i][j % object.edges.current[i].length].x + object.position.x - view_offset.x,
+			    object.edges.current[i][j % object.edges.current[i].length].y + object.position.y - view_offset.y,
+			    object.edges.current[i][j % object.edges.current[i].length].z + object.position.z - view_offset.z);
 			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
 		}
 		context.stroke();
@@ -365,7 +365,14 @@ draw3dObject(object)
 function
 make3dObject(objectEdges, position, rolling, velocity, velocityRolling, mass)
 {
-	var object = {x: position.x, y: position.y, z: position.z, roll: rolling.roll, pitch: rolling.pitch, yaw: rolling.yaw, edges: {origin: new Array(objectEdges.length), current: new Array(objectEdges.length)}, normalVector: new Array(objectEdges.length), velocity: velocity, velocityRolling: velocityRolling, mass: mass};
+	var object = {
+		position: {x: position.x, y: position.y, z: position.z},
+		rolling: {roll: rolling.roll, pitch: rolling.pitch, yaw: rolling.yaw},
+		edges: {origin: new Array(objectEdges.length), current: new Array(objectEdges.length)},
+		normalVector: new Array(objectEdges.length),
+		velocity: {x: velocity.x, y: velocity.y, z: velocity.z},
+		velocityRolling: {roll: velocityRolling.roll, pitch: velocityRolling.pitch, yaw: velocityRolling.yaw},
+		mass: mass};
 	// Compute normal vector
 	for (var i = 0; i < objectEdges.length; i++) {
 		object.edges.origin[i] = new Array(objectEdges[i].length);
@@ -377,6 +384,27 @@ make3dObject(objectEdges, position, rolling, velocity, velocityRolling, mass)
 		object.normalVector[i] = calcNormalVector(objectEdges[i]);
 	}
 	return object;
+}
+
+function
+collapse3dObject(object)
+{
+	var index = listObjects.indexOf(object);
+	listObjects.splice(index, 1);
+	for (var i = 0; i < object.edges.origin.length; i++) {
+		for (var j = 1; j <= object.edges.origin[i].length; j++) {
+			var edge = [object.edges.origin[i][j - 1], object.edges.origin[i][j % object.edges.origin[i].length]];
+			var norm = norm_XYZ({x: edge[1].x - edge[0].x, y: edge[1].y - edge[0].y, z: edge[1].z - edge[0].z});
+			var newObject = make3dObject(
+			    [[{x: -norm / 2, y: 0, z: 0}, {x: norm /2, y: 0, z: 0}]],
+			    object.position,
+			    object.rolling,
+			    {x: 50 * (Math.random() - 0.5), y: 50 * (Math.random() - 0.5), z: 50 * Math.random()},
+			    {roll: rot_degree * (Math.random() - 0.5), pitch: rot_degree * (Math.random() - 0.5), yaw: rot_degree * (Math.random() - 0.5)},
+			    object.mass / object.edges.origin.length);
+			listObjects.push(newObject);
+		}
+	}
 }
 
 function
@@ -520,7 +548,7 @@ rot_field_XYZ_onZ(yaw, y)
 }
 
 function
-rotate3d(roll, pitch, yaw, XYZ)
+rotate3d(rolling, XYZ)
 {
 	var di_r = {x: 0, y: 0, z: 0};
 	var di_p = {x: 0, y: 0, z: 0};
@@ -529,56 +557,56 @@ rotate3d(roll, pitch, yaw, XYZ)
 	var di = {x: 0, y: 0, z: 0};
 	// Yaw
 	di_y.x =
-	    XYZ.x * Math.cos(2.0 * Math.PI * yaw / rot_degree) -
-	    XYZ.y * Math.sin(2.0 * Math.PI * yaw / rot_degree) -
+	    XYZ.x * Math.cos(2.0 * Math.PI * rolling.yaw / rot_degree) -
+	    XYZ.y * Math.sin(2.0 * Math.PI * rolling.yaw / rot_degree) -
 	    XYZ.x;
 	di_y.y =
-	    XYZ.y * Math.cos(2.0 * Math.PI * yaw / rot_degree) +
-	    XYZ.x * Math.sin(2.0 * Math.PI * yaw / rot_degree) -
+	    XYZ.y * Math.cos(2.0 * Math.PI * rolling.yaw / rot_degree) +
+	    XYZ.x * Math.sin(2.0 * Math.PI * rolling.yaw / rot_degree) -
 	    XYZ.y;
 	// Pitch
 	di_p.x =
-	    XYZ.x * Math.cos(2.0 * Math.PI * pitch / rot_degree) +
-	    XYZ.z * Math.sin(2.0 * Math.PI * pitch / rot_degree) -
+	    XYZ.x * Math.cos(2.0 * Math.PI * rolling.pitch / rot_degree) +
+	    XYZ.z * Math.sin(2.0 * Math.PI * rolling.pitch / rot_degree) -
 	    XYZ.x;
 	di_p.z =
-	    XYZ.z * Math.cos(2.0 * Math.PI * pitch / rot_degree) -
-	    XYZ.x * Math.sin(2.0 * Math.PI * pitch / rot_degree) -
+	    XYZ.z * Math.cos(2.0 * Math.PI * rolling.pitch / rot_degree) -
+	    XYZ.x * Math.sin(2.0 * Math.PI * rolling.pitch / rot_degree) -
 	    XYZ.z;
 	di_py.x =
 	    di_p.x +
-	    di_y.x * Math.cos(2.0 * Math.PI * pitch / rot_degree);
+	    di_y.x * Math.cos(2.0 * Math.PI * rolling.pitch / rot_degree);
 	di_py.y = di_y.y;
 	di_py.z =
 	    di_p.z -
-	    di_y.x * Math.sin(2.0 * Math.PI * pitch / rot_degree);
+	    di_y.x * Math.sin(2.0 * Math.PI * rolling.pitch / rot_degree);
 	// Roll
 	di_r.y =
-	    XYZ.y * Math.cos(2.0 * Math.PI * roll / rot_degree) -
-	    XYZ.z * Math.sin(2.0 * Math.PI * roll/ rot_degree) -
+	    XYZ.y * Math.cos(2.0 * Math.PI * rolling.roll / rot_degree) -
+	    XYZ.z * Math.sin(2.0 * Math.PI * rolling.roll/ rot_degree) -
 	    XYZ.y;
 	di_r.z =
-	    XYZ.z * Math.cos(2.0 * Math.PI * roll / rot_degree) +
-	    XYZ.y * Math.sin(2.0 * Math.PI * roll / rot_degree) -
+	    XYZ.z * Math.cos(2.0 * Math.PI * rolling.roll / rot_degree) +
+	    XYZ.y * Math.sin(2.0 * Math.PI * rolling.roll / rot_degree) -
 	    XYZ.z;
 	di.x = di_py.x;
 	di.y =
 	    di_r.y +
-	    di_py.y * Math.cos(2.0 * Math.PI * roll / rot_degree) -
-	    di_py.z * Math.sin(2.0 * Math.PI * roll/ rot_degree);
+	    di_py.y * Math.cos(2.0 * Math.PI * rolling.roll / rot_degree) -
+	    di_py.z * Math.sin(2.0 * Math.PI * rolling.roll/ rot_degree);
 	di.z =
 	    di_r.z +
-	    di_py.z * Math.cos(2.0 * Math.PI * roll / rot_degree) +
-	    di_py.y * Math.sin(2.0 * Math.PI * roll / rot_degree);
+	    di_py.z * Math.cos(2.0 * Math.PI * rolling.roll / rot_degree) +
+	    di_py.y * Math.sin(2.0 * Math.PI * rolling.roll / rot_degree);
 	return {x: XYZ.x + di.x, y: XYZ.y + di.y, z: XYZ.z + di.z};
 }
 
 function
-rotate3dObject(roll, pitch, yaw, object)
+rotate3dObject(object)
 {
 	for (var i = 0; i < object.edges.origin.length; i++) {
 		for (var j = 0; j < object.edges.origin[i].length; j++) {
-			object.edges.current[i][j] = rotate3d(object.roll, object.pitch, object.yaw, object.edges.origin[i][j]);
+			object.edges.current[i][j] = rotate3d(object.rolling, object.edges.origin[i][j]);
 		}
 		object.normalVector[i] = calcNormalVector(object.edges.current[i]);
 	}
@@ -605,14 +633,25 @@ mouseMove(event)
 		if ((event.buttons & 1) != 0) {
 			rot_field_XYZ_onZ(event.clientX - prev_clientX, event.clientY - prev_clientY);
 		} else if ((event.buttons & 4) != 0) {
-			view_offset.x += event.clientX - prev_clientX;
-			view_offset.y += event.clientY - prev_clientY;
+			var move = {x: 0, y: 0}
+			move.x = event.clientX - prev_clientX;
+			move.y = event.clientY - prev_clientY;
+			view_offset.x -= move.x * field_XYZ.X.x + move.y * field_XYZ.X.y;
+			view_offset.y -= move.x * field_XYZ.Y.x + move.y * field_XYZ.Y.y;
+			view_offset.z -= move.x * field_XYZ.Z.x + move.y * field_XYZ.Z.y;
 		}
 		prev_clientX = event.clientX;
 		prev_clientY = event.clientY;
 	} else if (event.type === "touchmove") {
 		if (event.touches.length == 1) {
 			rot_field_XYZ_onZ(event.touches[0].clientX - prev_clientX, event.touches[0].clientY - prev_clientY);
+		} else if (event.touches.length == 2) {
+			var move = {x: 0, y: 0}
+			move.x = event.touches[0].clientX - prev_clientX;
+			move.y = event.touches[0].clientY - prev_clientY;
+			view_offset.x -= move.x * field_XYZ.X.x + move.y * field_XYZ.X.y;
+			view_offset.y -= move.x * field_XYZ.Y.x + move.y * field_XYZ.Y.y;
+			view_offset.z -= move.x * field_XYZ.Z.x + move.y * field_XYZ.Z.y;
 		}
 		prev_clientX = event.touches[0].clientX;
 		prev_clientY = event.touches[0].clientY;
