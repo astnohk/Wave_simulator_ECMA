@@ -103,7 +103,8 @@ function
 loop()
 {
 	physics();
-	draw();
+	drawBrane();
+	drawXYZVector();
 	// Draw 3D object
 	physicsObjects();
 	draw3dObjects();
@@ -113,24 +114,9 @@ loop()
 
 // ----- REALTIME -----
 function
-physics()
-{
-	for (var i = 0; i < braneSize.height; i++) {
-		for (var j = 0; j < braneSize.width; j++) {
-			vel[i * braneSize.width + j] *= 0.98; // damping
-			vel[i * braneSize.width + j] += accel(i, j) * dt;
-			brane_tmp[i * braneSize.width + j] = brane[i * braneSize.width + j] + vel[i * braneSize.width + j] * dt;
-		}
-	}
-	for (var n = 0; n < brane.length; n++) {
-		brane[n] = brane_tmp[n];
-	}
-}
-
-function
 braneAt(x, y)
 {
-	if (x < 0 || braneSize.width <= x || y <= 0 || braneSize.height <= y) {
+	if (x < 0 || braneSize.width <= x || y < 0 || braneSize.height <= y) {
 		return 0.0;
 	} else {
 		return brane[y * braneSize.width + x];
@@ -157,6 +143,33 @@ asin(y)
 	} else {
 		return -0.25 * Math.PI;
 	}
+}
+
+function
+physics()
+{
+	for (var y = 0; y < braneSize.height; y++) {
+		for (var x = 0; x < braneSize.width; x++) {
+			vel[y * braneSize.width + x] += accelBrane(x, y) * dt;
+			vel[y * braneSize.width + x] *= 0.98; // damping
+			brane_tmp[y * braneSize.width + x] = brane[y * braneSize.width + x] + vel[y * braneSize.width + x] * dt;
+		}
+	}
+	for (var n = 0; n < brane.length; n++) {
+		brane[n] = brane_tmp[n];
+	}
+}
+
+function
+accelBrane(x, y)
+{
+	var interest = braneAt(x, y);
+	var a = 0.0;
+	a += k_brane * (braneAt(x, y - 1) - interest);
+	a += k_brane * (braneAt(x, y + 1) - interest);
+	a += k_brane * (braneAt(x - 1, y) - interest);
+	a += k_brane * (braneAt(x + 1, y) - interest);
+	return a;
 }
 
 function
@@ -215,18 +228,6 @@ physicsObject(object)
 }
 
 function
-accel(i, j)
-{
-	var interest = brane[i * braneSize.width + j];
-	var a = 0.0;
-	a += k_brane * (braneAt(j, i - 1) - interest);
-	a += k_brane * (braneAt(j - 1, i) - interest);
-	a += k_brane * (braneAt(j, i + 1) - interest);
-	a += k_brane * (braneAt(j + 1, i) - interest);
-	return a;
-}
-
-function
 makeColormap()
 {
 	var dc = Math.ceil(255 / (colormap_quantize / 2));
@@ -245,57 +246,62 @@ makeColormap()
 }
 
 function
-draw()
+drawBrane()
 {
 	context.fillRect(0, 0, canvas.width, canvas.height);
 	var xy = {x: 0, y: 0};
-	var i;
-	var j;
+	var x;
+	var y;
 	var amp;
 	context.strokeStyle = 'blue';
-	for (i = 0; i < braneSize.height; i++) {
-		for (j = 1; j < braneSize.width; j++) {
-			amp = Math.round(2 * Math.max(Math.abs(braneAt(j - 1, i)), Math.abs(braneAt(j, i))));
+	for (y = 0; y < braneSize.height; y++) {
+		for (x = 1; x < braneSize.width; x++) {
+			amp = Math.round(2 * Math.max(Math.abs(braneAt(x - 1, y)), Math.abs(braneAt(x, y))));
 			context.strokeStyle = colormap.current[Math.min(colormap_quantize, amp)];
 			context.beginPath();
 			xy = calcView(
-			    (j - 1) * interval - view_offset.x,
-			    i * interval - view_offset.y,
-			    braneAt(j - 1, i));
+			    (x - 1) * interval - view_offset.x,
+			    y * interval - view_offset.y,
+			    braneAt(x - 1, y));
 			context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			xy = calcView(
-			    j * interval - view_offset.x,
-			    i * interval - view_offset.y,
-			    braneAt(j, i));
+			    x * interval - view_offset.x,
+			    y * interval - view_offset.y,
+			    braneAt(x, y));
 			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			context.stroke();
 		}
 	}
-	for (j = 0; j < braneSize.width; j++) {
-		for (i = 1; i < braneSize.height; i++) {
-			amp = Math.round(2 * Math.max(Math.abs(braneAt(j, i - 1)), Math.abs(braneAt(j, i))));
+	for (x = 0; x < braneSize.width; x++) {
+		for (y = 1; y < braneSize.height; y++) {
+			amp = Math.round(2 * Math.max(Math.abs(braneAt(x, y - 1)), Math.abs(braneAt(x, y))));
 			context.strokeStyle = colormap.current[Math.min(colormap_quantize, amp)];
 			context.beginPath();
 			xy = calcView(
-			    j * interval - view_offset.x,
-			    (i - 1) * interval - view_offset.y,
-			    braneAt(j, i - 1));
+			    x * interval - view_offset.x,
+			    (y - 1) * interval - view_offset.y,
+			    braneAt(x, y - 1));
 			context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			xy = calcView(
-			    j * interval - view_offset.x,
-			    i * interval - view_offset.y,
-			    braneAt(j, i));
+			    x * interval - view_offset.x,
+			    y * interval - view_offset.y,
+			    braneAt(x, y));
 			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
 			context.stroke();
 		}
 	}
+}
+
+function
+drawXYZVector()
+{
 	// Show XYZ coordinate
 	context.lineWidth = 2;
 	context.beginPath();
 	context.moveTo(42, 42);
 	context.strokeStyle = "red";
 	context.lineTo(42 + 42 * field_XYZ.X.x, 42 + 42 * field_XYZ.X.y);
-	xy = calcView(-7, -7, 0);
+	var xy = calcView(-7, -7, 0);
 	context.lineTo(42 + 42 * field_XYZ.X.x + xy.x, 42 + 42 * field_XYZ.X.y + xy.y);
 	xy = calcView(-7, 8, 0);
 	context.lineTo(42 + 42 * field_XYZ.X.x + xy.x, 42 + 42 * field_XYZ.X.y + xy.y);
