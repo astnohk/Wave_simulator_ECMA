@@ -18,6 +18,7 @@ var interval = 30; // drawing interval pixels
 
 var rainThreshold = 0.1;
 
+var scale = 1.0;
 var field_XYZ = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
 var view_offset = {x: 0, y: 0, z: 0};
 var display_offset = {x: 0, y: 0, z: 0};
@@ -260,15 +261,15 @@ drawBrane()
 			context.strokeStyle = colormap.current[Math.min(colormap_quantize, amp)];
 			context.beginPath();
 			xy = calcView(
-			    (x - 1) * interval - view_offset.x,
-			    y * interval - view_offset.y,
-			    braneAt(x - 1, y) - view_offset.z);
-			context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
+			    (x - 1) * interval,
+			    y * interval,
+			    braneAt(x - 1, y));
+			context.moveTo(xy.x, xy.y);
 			xy = calcView(
-			    x * interval - view_offset.x,
-			    y * interval - view_offset.y,
-			    braneAt(x, y) - view_offset.z);
-			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
+			    x * interval,
+			    y * interval,
+			    braneAt(x, y));
+			context.lineTo(xy.x, xy.y);
 			context.stroke();
 		}
 	}
@@ -278,15 +279,15 @@ drawBrane()
 			context.strokeStyle = colormap.current[Math.min(colormap_quantize, amp)];
 			context.beginPath();
 			xy = calcView(
-			    x * interval - view_offset.x,
-			    (y - 1) * interval - view_offset.y,
-			    braneAt(x, y - 1) - view_offset.z);
-			context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
+			    x * interval,
+			    (y - 1) * interval,
+			    braneAt(x, y - 1));
+			context.moveTo(xy.x, xy.y);
 			xy = calcView(
-			    x * interval - view_offset.x,
-			    y * interval - view_offset.y,
-			    braneAt(x, y) - view_offset.z);
-			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
+			    x * interval,
+			    y * interval,
+			    braneAt(x, y));
+			context.lineTo(xy.x, xy.y);
 			context.stroke();
 		}
 	}
@@ -301,27 +302,27 @@ drawXYZVector()
 	context.moveTo(42, 42);
 	context.strokeStyle = "red";
 	context.lineTo(42 + 42 * field_XYZ.X.x, 42 + 42 * field_XYZ.X.y);
-	var xy = calcView(-7, -7, 0);
+	var xy = calcXYZOnFieldXYZ(-7, -7, 0);
 	context.lineTo(42 + 42 * field_XYZ.X.x + xy.x, 42 + 42 * field_XYZ.X.y + xy.y);
-	xy = calcView(-7, 8, 0);
+	xy = calcXYZOnFieldXYZ(-7, 8, 0);
 	context.lineTo(42 + 42 * field_XYZ.X.x + xy.x, 42 + 42 * field_XYZ.X.y + xy.y);
 	context.stroke();
 	context.beginPath();
 	context.moveTo(42, 42);
 	context.strokeStyle = "lime";
 	context.lineTo(42 + 42 * field_XYZ.Y.x, 42 + 42 * field_XYZ.Y.y);
-	xy = calcView(7, -7, 0);
+	xy = calcXYZOnFieldXYZ(7, -7, 0);
 	context.lineTo(42 + 42 * field_XYZ.Y.x + xy.x, 42 + 42 * field_XYZ.Y.y + xy.y);
-	xy = calcView(-8, -7, 0);
+	xy = calcXYZOnFieldXYZ(-8, -7, 0);
 	context.lineTo(42 + 42 * field_XYZ.Y.x + xy.x, 42 + 42 * field_XYZ.Y.y + xy.y);
 	context.stroke();
 	context.beginPath();
 	context.moveTo(42, 42);
 	context.strokeStyle = "blue";
 	context.lineTo(42 + 42 * field_XYZ.Z.x, 42 + 42 * field_XYZ.Z.y);
-	xy = calcView(0, 7, -7);
+	xy = calcXYZOnFieldXYZ(0, 7, -7);
 	context.lineTo(42 + 42 * field_XYZ.Z.x + xy.x, 42 + 42 * field_XYZ.Z.y + xy.y);
-	xy = calcView(0, -8, -7);
+	xy = calcXYZOnFieldXYZ(0, -8, -7);
 	context.lineTo(42 + 42 * field_XYZ.Z.x + xy.x, 42 + 42 * field_XYZ.Z.y + xy.y);
 	context.stroke();
 	context.lineWidth = 1;
@@ -347,16 +348,16 @@ draw3dObject(object)
 		}
 		context.beginPath();
 		xy = calcView(
-		    object.edges.current[i][0].x + object.position.x - view_offset.x,
-		    object.edges.current[i][0].y + object.position.y - view_offset.y,
-		    object.edges.current[i][0].z + object.position.z - view_offset.z);
-		context.moveTo(xy.x + display_offset.x, xy.y + display_offset.y);
+		    object.edges.current[i][0].x + object.position.x,
+		    object.edges.current[i][0].y + object.position.y,
+		    object.edges.current[i][0].z + object.position.z);
+		context.moveTo(xy.x, xy.y);
 		for (var j = 1; j <= object.edges.current[i].length; j++) {
 			xy = calcView(
-			    object.edges.current[i][j % object.edges.current[i].length].x + object.position.x - view_offset.x,
-			    object.edges.current[i][j % object.edges.current[i].length].y + object.position.y - view_offset.y,
-			    object.edges.current[i][j % object.edges.current[i].length].z + object.position.z - view_offset.z);
-			context.lineTo(xy.x + display_offset.x, xy.y + display_offset.y);
+			    object.edges.current[i][j % object.edges.current[i].length].x + object.position.x,
+			    object.edges.current[i][j % object.edges.current[i].length].y + object.position.y,
+			    object.edges.current[i][j % object.edges.current[i].length].z + object.position.z);
+			context.lineTo(xy.x, xy.y);
 		}
 		context.stroke();
 	}
@@ -435,11 +436,23 @@ calcNormalVector(edges)
 }
 
 function
-calcView(x, y, z)
+calcXYZOnFieldXYZ(x, y, z)
 {
 	var xy = {x: 0, y: 0};
 	xy.x = x * field_XYZ.X.x + y * field_XYZ.Y.x + z * field_XYZ.Z.x;
 	xy.y = x * field_XYZ.X.y + y * field_XYZ.Y.y + z * field_XYZ.Z.y;
+	return xy;
+}
+
+function
+calcView(x, y, z)
+{
+	var xy = {x: 0, y: 0};
+	var X = x - view_offset.x;
+	var Y = y - view_offset.y;
+	var Z = z - view_offset.z;
+	xy.x = scale * (X * field_XYZ.X.x + Y * field_XYZ.Y.x + Z * field_XYZ.Z.x) + display_offset.x;
+	xy.y = scale * (X * field_XYZ.X.y + Y * field_XYZ.Y.y + Z * field_XYZ.Z.y) + display_offset.y;
 	return xy;
 }
 
