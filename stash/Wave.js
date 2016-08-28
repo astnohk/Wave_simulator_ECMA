@@ -104,11 +104,8 @@ function
 loop()
 {
 	physics();
-	drawBrane();
-	drawXYZVector();
-	// Draw 3D object
 	physicsObjects();
-	draw3dObjects();
+	draw();
 }
 
 
@@ -247,9 +244,18 @@ makeColormap()
 }
 
 function
+draw()
+{
+	context.clearRect(0, 0, canvas.width, canvas.height);
+	drawBrane();
+	drawXYZVector();
+	// Draw 3D object
+	draw3dObjects();
+}
+
+function
 drawBrane()
 {
-	context.fillRect(0, 0, canvas.width, canvas.height);
 	var xy = {x: 0, y: 0};
 	var x;
 	var y;
