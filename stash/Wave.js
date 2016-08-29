@@ -85,7 +85,7 @@ init()
 	document.getElementById("collapseButton").addEventListener("mousedown", collapseBoat, false);
 	document.getElementById("collapseButton").addEventListener("touchstart", collapseBoat, false);
 	// Adjust initial view rotation
-	rot_field_XYZ(0, Math.PI * 135.0 / 180.0);
+	rot_field_XYZ(0, Math.PI * 120.0 / 180.0);
 	// Start loop
 	timeClock = setInterval(loop, 25);
 	// Random impulse
