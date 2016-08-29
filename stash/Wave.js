@@ -31,7 +31,7 @@ var prev_clientX = 0;
 var prev_clientY = 0;
 
 // 3D object
-var throttleAccelerate = 1.5;
+var throttleAccelerate = 0.2;
 var listObjects = new Array();
 var boatPositionInitial = {x: 300, y: 300, z: 0};
 var boatMass = 4;
@@ -225,23 +225,17 @@ physicsObject(object)
 	object.position.y += object.velocity.y * dt;
 	object.position.z += object.velocity.z * dt;
 	object.velocity.x -=
-	    object.velocity.x * dampingVelocity * dt *
-	    (Math.abs(object.velocity.x) > 1.0 ? Math.abs(object.velocity.x) : 1.0);
+	    object.velocity.x * dampingVelocity * dt;
 	object.velocity.y -=
-	    object.velocity.y * dampingVelocity * dt *
-	    (Math.abs(object.velocity.y) > 1.0 ? Math.abs(object.velocity.y) : 1.0);
+	    object.velocity.y * dampingVelocity * dt;
 	object.velocity.z -=
-	    object.velocity.z * dampingVelocity * dt *
-	    (Math.abs(object.velocity.z) > 1.0 ? Math.abs(object.velocity.z) : 1.0);
+	    object.velocity.z * dampingVelocity * dt;
 	object.rolling.roll += object.velocityRolling.roll * dt;
 	object.rolling.pitch += object.velocityRolling.pitch * dt;
 	object.rolling.yaw += object.velocityRolling.yaw * dt;
 	object.velocityRolling.roll -= object.velocityRolling.roll * dampingVelocity * dt;
 	object.velocityRolling.pitch -= object.velocityRolling.pitch * dampingVelocity * dt;
 	object.velocityRolling.yaw -= object.velocityRolling.yaw * dampingVelocity * dt;
-	object.velocityRolling.roll *= 0.99; // For damping
-	object.velocityRolling.pitch *= 0.99; // For damping
-	object.velocityRolling.yaw *= 0.99; // For damping
 	rotate3dObject(object); // Rotate object
 }
 
@@ -463,8 +457,8 @@ collapse3dObject(object)
 			    [[{x: -norm / 2, y: 0, z: 0}, {x: norm /2, y: 0, z: 0}]],
 			    object.position,
 			    object.rolling,
-			    {x: 50 * (Math.random() - 0.5), y: 50 * (Math.random() - 0.5), z: 50 * Math.random()},
-			    {roll: rot_degree * (Math.random() - 0.5), pitch: rot_degree * (Math.random() - 0.5), yaw: rot_degree * (Math.random() - 0.5)},
+			    {x: 100 * (Math.random() - 0.5), y: 100 * (Math.random() - 0.5), z: 100 * Math.random()},
+			    {roll: 2.0 * Math.PI * (Math.random() - 0.5), pitch: 2.0 * Math.PI * (Math.random() - 0.5), yaw: 2.0 * Math.PI * (Math.random() - 0.5)},
 			    object.mass / object.edges.origin.length);
 			listObjects.push(newObject);
 		}
