@@ -28,6 +28,8 @@ GlobalEventClass()
 
 
 
+// Time
+var time;
 // User ID
 var userId = "you";
 var onetimepass = "";
@@ -43,7 +45,7 @@ var listBackground = {
     blue: {name: "Blue", color: "rgb(0, 0, 128)"},
     black: {name: "Black", color: "rgb(0, 0, 0)"}};
 // Settings
-var UserSettings = {BackgroundColor: "change"};
+var UserSettings = {BackgroundColor: "black"};
 // Window list
 var WindowList = new Array();
 
@@ -67,6 +69,7 @@ globalMouseUpEvent.add(dragWindow);
 function
 initECMASystem6()
 {
+	var timeClock = setInterval(updateTimeAndBackground, 1000);
 	// Add Window Scroller
 	appendWindowScroller();
 	// Event Listener for mouse click or touch
@@ -76,6 +79,17 @@ initECMASystem6()
 	window.addEventListener("touchmove", globalMouseMoveEvent.doEvent, false);
 	window.addEventListener("mouseup", globalMouseUpEvent.doEvent, false);
 	window.addEventListener("touchend", globalMouseUpEvent.doEvent, false);
+}
+
+
+
+// ----- REALTIME -----
+function
+updateTimeAndBackground()
+{
+	time = new Date();
+	// Change background color
+	changeBackgroundColor();
 }
 
 
@@ -173,6 +187,7 @@ openChangeBackground()
 	var backgroundChanger =
 	    function (evnt) {
 		    UserSettings.BackgroundColor = evnt.target.id.slice(14);
+		    changeBackgroundColor();
 		    // Reset outline color
 		    var units = document.querySelectorAll("#changeBackground div.BlackBoard div.upperBox span");
 		    for (var i = 0; i < units.length; i++) {
@@ -220,6 +235,37 @@ openChangeBackground()
 	    },
 	    false);
 	box_button.appendChild(save);
+}
+
+function
+changeBackgroundColor()
+{
+	// Set background color
+	if (UserSettings.BackgroundColor === "change") {
+		if (time.getMonth() <= 3 || 10 <= time.getMonth()) {
+			if (time.getHours() < 6 || 18 <= time.getHours()) {
+				document.body.style.background = "rgba(10, 10, 0, 1.0)";
+			} else if (time.getHours() < 7 || 17 <= time.getHours()) {
+				document.body.style.background = "rgba(247, 207, 110, 1.0)";
+			} else if (time.getHours() < 8 || 16 <= time.getHours()) {
+				document.body.style.background = "rgba(110, 230, 233, 1.0)";
+			} else {
+				document.body.style.background = "rgba(93, 198, 255, 1.0)";
+			}
+		} else {
+			if (time.getHours() < 4 || 19 <= time.getHours()) {
+				document.body.style.background = "rgba(10, 10, 0, 1.0)";
+			} else if (time.getHours() < 5 || 18 <= time.getHours()) {
+				document.body.style.background = "rgba(247, 207, 110, 1.0)";
+			} else if (time.getHours() < 6 || 17 <= time.getHours()) {
+				document.body.style.background = "rgba(110, 230, 233, 1.0)";
+			} else {
+				document.body.style.background = "rgba(93, 198, 255, 1.0)";
+			}
+		}
+	} else {
+		document.body.style.background = listBackground[UserSettings.BackgroundColor].color;
+	}
 }
 
 function
