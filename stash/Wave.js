@@ -83,6 +83,7 @@ init()
 	// Set event listener
 	window.addEventListener("keydown", keyDown, false);
 	document.getElementById("collapseButton").addEventListener("mousedown", collapseBoat, false);
+	document.getElementById("collapseButton").addEventListener("touchstart", collapseBoat, false);
 	// Adjust initial view rotation
 	rot_field_XYZ(0, Math.PI * 135.0 / 180.0);
 	// Start loop
