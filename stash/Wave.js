@@ -1,747 +1,771 @@
 // The code written in BSD/KNF indent style
 "use strict";
 
-var timeClock;
+class WaveSimulator {
+	constructor(windowSystemRoot, rootWindow) {
+		this.SysRoot = windowSystemRoot;
+		this.rootWindow = rootWindow;
+		this.rootWindow.style.overflow = "hidden";
+		this.rootWindow.rootInstance = this;
+		this.rootWindowStyle = window.getComputedStyle(this.rootWindow);
 
-var canvas;
-var context;
+		this.collapseButton = null;
 
-var dt = 0.25;
-var g = 2.4;
-var f_float = 5.0;
-var braneSize = {width: 33, height: 33};
-var brane = new Array(braneSize.width * braneSize.height);
-var brane_tmp = new Array(braneSize.width * braneSize.height);
-var vel = new Array(braneSize.width * braneSize.height);
-var k_brane = 0.2;
-var interval = 30; // drawing interval pixels
+		this.timeClock = null;
 
-var rainThreshold = 0.1;
-var raining = null;
+		this.canvas = null;
+		this.context = null;
 
-var scale = 1.0;
-var field_XYZ = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
-var view_offset = {x: 0, y: 0, z: 0};
-var display_offset = {x: 0, y: 0, z: 0};
-var rot_degree = 3600;
-var colormap_quantize = 200;
-var colormap = {current: [], normal: new Array(colormap_quantize), bluesea: new Array(colormap_quantize)};
+		this.dt = 0.25;
+		this.g = 2.4;
+		this.f_float = 5.0;
+		this.braneSize = {width: 33, height: 33};
+		this.brane = new Array(this.braneSize.width * this.braneSize.height);
+		this.brane_tmp = new Array(this.braneSize.width * this.braneSize.height);
+		this.velocity = new Array(this.braneSize.width * this.braneSize.height);
+		this.k_brane = 0.2;
+		this.interval = 30; // drawing interval pixels
 
-var prev_clientX = 0;
-var prev_clientY = 0;
+		this.rainThreshold = 0.1;
+		this.raining = null;
 
-// 3D object
-var throttleAccelerate = 0.2;
-var listObjects = new Array();
-var boatPositionInitial = {x: 300, y: 300, z: 0};
-var boatMass = 4;
-var boatThrottleMax = 5;
-var boat;
-var boatEdges =
-    [[{x:35, y:0, z:10}, {x:20, y:15, z:10}, {x:-20, y:15, z:10}, {x:-20, y:-15, z:10}, {x:20, y:-15, z:10}],
-    [{x:35, y:0, z:10}, {x:20, y:0, z:-5}, {x:20, y:15, z:10}],
-    [{x:35, y:0, z:10}, {x:20, y:-15, z:10}, {x:20, y:0, z:-5}],
-    [{x:20, y:15, z:10}, {x:20, y:0, z:-5}, {x:-20, y:0, z:-5}, {x:-20, y:15, z:10}],
-    [{x:20, y:-15, z:10}, {x:-20, y:-15, z:10}, {x:-20, y:0, z:-5}, {x:20, y:0, z:-5}],
-    [{x:-20, y:15, z:10}, {x:-20, y:0, z:-5}, {x:-20, y:-15, z:10}]];
+		this.scale = 1.0;
+		this.fieldXYZ = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
+		this.viewOffset = {x: 0, y: 0, z: 0};
+		this.displayOffset = {x: 0, y: 0, z: 0};
+		this.rotDegree = 3600;
+		this.colormapQuantize = 200;
+		this.colormap = {current: [], normal: new Array(this.colormapQuantize), bluesea: new Array(this.colormapQuantize)};
 
+		this.prev_clientX = 0;
+		this.prev_clientY = 0;
 
-
-// Initialize
-window.addEventListener("load", init, false);
-
-
+		// 3D object
+		this.throttleAccelerate = 0.2;
+		this.listObjects = new Array();
+		this.boatPositionInitial = {x: 300, y: 300, z: 0};
+		this.boatMass = 4;
+		this.boatThrottleMax = 5;
+		this.boat;
+		this.boatEdges =
+		    [[{x:35, y:0, z:10}, {x:20, y:15, z:10}, {x:-20, y:15, z:10}, {x:-20, y:-15, z:10}, {x:20, y:-15, z:10}],
+		    [{x:35, y:0, z:10}, {x:20, y:0, z:-5}, {x:20, y:15, z:10}],
+		    [{x:35, y:0, z:10}, {x:20, y:-15, z:10}, {x:20, y:0, z:-5}],
+		    [{x:20, y:15, z:10}, {x:20, y:0, z:-5}, {x:-20, y:0, z:-5}, {x:-20, y:15, z:10}],
+		    [{x:20, y:-15, z:10}, {x:-20, y:-15, z:10}, {x:-20, y:0, z:-5}, {x:20, y:0, z:-5}],
+		    [{x:-20, y:15, z:10}, {x:-20, y:0, z:-5}, {x:-20, y:-15, z:10}]];
+		
+		// Initialize
+		this.init();
+	}
 
 // ----- Initialize -----
-function
-init()
-{
-	// Make colormap
-	makeColormap();
-	colormap.current = colormap.bluesea;
-	// Initialize brane
-	for (var i = 0; i < braneSize.height; i++) {
-		for (var j = 0; j < braneSize.width; j++) {
-			brane[i * braneSize.width + j] = 0.0;
-			brane_tmp[i * braneSize.width + j] = 0.0;
-			vel[i * braneSize.width + j] = 0.0;
+	init()
+	{
+		// Make colormap
+		this.makeColormap();
+		this.colormap.current = this.colormap.bluesea;
+		// Initialize brane
+		for (let i = 0; i < this.braneSize.height; i++) {
+			for (let j = 0; j < this.braneSize.width; j++) {
+				this.brane[i * this.braneSize.width + j] = 0.0;
+				this.brane_tmp[i * this.braneSize.width + j] = 0.0;
+				this.velocity[i * this.braneSize.width + j] = 0.0;
+			}
+		}
+		// Initialize canvas
+		this.prepareCanvas();
+		// Set event listener
+		this.rootWindow.addEventListener("keydown", function (e) { e.currentTarget.rootInstance.keyDown(e); }, false);
+		this.collapseButton = document.createElement("div");
+		this.collapseButton.rootInstance = this;
+		this.collapseButton.innerHTML = "collapse";
+		this.collapseButton.id = "collapseButton";
+		this.collapseButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.collapseBoat(e); }, false);
+		this.collapseButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.collapseBoat(e); }, false);
+		this.rootWindow.appendChild(this.collapseButton);
+
+		// Adjust initial view rotation
+		this.rotXYZ(this.fieldXYZ, 0, Math.PI * 120.0 / 180.0);
+		// Set root for setInterval
+		let root = this;
+		// Start loop
+		this.timeClock = setInterval(function () { root.loop(); }, 25);
+		// Random impulse
+		this.raining = setInterval(function ()
+		    {
+			    let f = Math.random();
+			    if (f < root.rainThreshold) {
+				    root.brane[Math.floor(33 * Math.random()) * root.braneSize.width + Math.floor(33 * Math.random())] = 200.0 * f;
+				    root.rainThreshold += root.rainThreshold < 1.0 ? 0.001 : 0.0;
+			    }
+		    }, 50);
+		// Make 3D object
+		this.boat = this.make3dObject(this.boatEdges, this.boatPositionInitial, {roll: 0, pitch: 0, yaw: 0}, {x: 0, y: 0, z: 0}, {roll: 0, pitch: 0, yaw: 0}, this.boatMass);
+		// Add 3D objects to list
+		this.listObjects.push(this.boat);
+
+		// Set view offset
+		this.viewOffset.x = this.braneSize.width * this.interval / 2.0
+		this.viewOffset.y = this.braneSize.height * this.interval / 2.0
+		// Set display offset
+		this.displayOffset.x = this.canvas.width / 2.0
+		this.displayOffset.y = this.canvas.height / 2.0
+	}
+
+	prepareCanvas()
+	{
+		// Initialize canvas
+		this.canvas = document.createElement("canvas");
+		this.canvas.rootInstance = this;
+		this.canvas.id = "WaveSimulatorMainPool";
+		this.canvas.style.width = "100%";
+		this.canvas.style.height = "100%";
+		this.rootWindow.appendChild(this.canvas);
+		this.canvas.addEventListener(
+		    "windowdrag",
+		    function (e) {
+			    let style = window.getComputedStyle(e.currentTarget);
+			    e.currentTarget.width = parseInt(style.width, 10);
+			    e.currentTarget.height = parseInt(style.height, 10);
+			    let root = e.currentTarget.rootInstance;
+			    root.displayOffset.x = e.currentTarget.width / 2.0
+			    root.displayOffset.y = e.currentTarget.height / 2.0
+		    },
+		    false);
+		this.canvas.addEventListener("mousedown", function (e) { e.currentTarget.rootInstance.mouseClick(e); }, false);
+		this.canvas.addEventListener("mousemove", function (e) { e.currentTarget.rootInstance.mouseMove(e); }, false);
+		this.canvas.addEventListener("touchstart", function (e) { e.currentTarget.rootInstance.mouseClick(e); }, false);
+		this.canvas.addEventListener("touchmove", function (e) { e.currentTarget.rootInstance.mouseMove(e); }, false);
+		this.context = this.canvas.getContext("2d");
+		// Initialize canvas size
+		let canvasStyle = window.getComputedStyle(this.canvas);
+		this.canvas.width = parseInt(canvasStyle.width, 10);
+		this.canvas.height = parseInt(canvasStyle.height, 10);
+	}
+
+	// ----- Start Simulation -----
+	loop()
+	{
+		this.physics();
+		this.physicsObjects();
+		this.draw();
+	}
+
+
+
+	// ----- REALTIME -----
+	braneAt(x, y)
+	{
+		if (x < 0 || this.braneSize.width <= x || y < 0 || this.braneSize.height <= y) {
+			return 0.0;
+		} else {
+			return this.brane[y * this.braneSize.width + x];
 		}
 	}
-	// Set view offset
-	view_offset.x = braneSize.width * interval / 2.0
-	view_offset.y = braneSize.height * interval / 2.0
-	// Set display offset
-	display_offset.x = braneSize.width * interval / 2.0
-	display_offset.y = braneSize.height * interval / 2.0
-	// Initialize canvas
-	canvas = document.getElementById("mainPool");
-	canvas.addEventListener("mousedown", mouseClick, false);
-	canvas.addEventListener("mousemove", mouseMove, false);
-	canvas.addEventListener("touchstart", mouseClick, false);
-	canvas.addEventListener("touchmove", mouseMove, false);
-	context = canvas.getContext("2d");
-	// Set event listener
-	window.addEventListener("keydown", keyDown, false);
-	document.getElementById("collapseButton").addEventListener("mousedown", collapseBoat, false);
-	document.getElementById("collapseButton").addEventListener("touchstart", collapseBoat, false);
-	// Adjust initial view rotation
-	rot_field_XYZ(0, Math.PI * 120.0 / 180.0);
-	// Start loop
-	timeClock = setInterval(loop, 25);
-	// Random impulse
-	raining = setInterval(function ()
-	    {
-		    var f = Math.random();
-		    if (f < rainThreshold) {
-			    brane[Math.floor(33 * Math.random()) * braneSize.width + Math.floor(33 * Math.random())] = 200.0 * f;
-			    rainThreshold += rainThreshold < 1.0 ? 0.001 : 0.0;
-		    }
-	    }, 50);
-	// Make 3D object
-	boat = make3dObject(boatEdges, boatPositionInitial, {roll: 0, pitch: 0, yaw: 0}, {x: 0, y: 0, z: 0}, {roll: 0, pitch: 0, yaw: 0}, boatMass);
-	// Add 3D objects to list
-	listObjects.push(boat);
-}
 
-
-
-
-// ----- Start Simulation -----
-function
-loop()
-{
-	physics();
-	physicsObjects();
-	draw();
-}
-
-
-
-// ----- REALTIME -----
-function
-braneAt(x, y)
-{
-	if (x < 0 || braneSize.width <= x || y < 0 || braneSize.height <= y) {
-		return 0.0;
-	} else {
-		return brane[y * braneSize.width + x];
-	}
-}
-
-function
-braneInsideOrNot(x, y)
-{
-	if (x < 0 || braneSize.width <= x || y <= 0 || braneSize.height <= y) {
-		return false;
-	} else {
-		return true;
-	}
-}
-
-function
-asin(y)
-{
-	if (-1.0 < y && y < 1.0) {
-		return Math.asin(y);
-	} else if (y > 0) {
-		return 0.25 * Math.PI;
-	} else {
-		return -0.25 * Math.PI;
-	}
-}
-
-function
-physics()
-{
-	for (var y = 0; y < braneSize.height; y++) {
-		for (var x = 0; x < braneSize.width; x++) {
-			vel[y * braneSize.width + x] += accelBrane(x, y) * dt;
-			vel[y * braneSize.width + x] *= 0.98; // damping
-			brane_tmp[y * braneSize.width + x] = brane[y * braneSize.width + x] + vel[y * braneSize.width + x] * dt;
+	braneInsideOrNot(x, y)
+	{
+		if (x < 0 || this.braneSize.width <= x || y <= 0 || this.braneSize.height <= y) {
+			return false;
+		} else {
+			return true;
 		}
 	}
-	for (var n = 0; n < brane.length; n++) {
-		brane[n] = brane_tmp[n];
-	}
-}
 
-function
-accelBrane(x, y)
-{
-	var interest = braneAt(x, y);
-	var a = 0.0;
-	a += k_brane * (braneAt(x, y - 1) - interest);
-	a += k_brane * (braneAt(x, y + 1) - interest);
-	a += k_brane * (braneAt(x - 1, y) - interest);
-	a += k_brane * (braneAt(x + 1, y) - interest);
-	return a;
-}
-
-function
-physicsObjects()
-{
-	for (var i = 0; i < listObjects.length; i++) {
-		physicsObject(listObjects[i]);
-	}
-}
-
-function
-physicsObject(object)
-{
-	var x_axis = rotate3d(object.rolling, {x:1, y:0, z:0});
-	var y_axis = rotate3d(object.rolling, {x:0, y:1, z:0});
-	var z_axis = rotate3d(object.rolling, {x:0, y:0, z:1});
-	var x = Math.floor(object.position.x / interval);
-	var y = Math.floor(object.position.y / interval);
-	var dampingVelocity = 0.05;
-	// Gravity
-	object.velocity.z -= g * dt;
-	// Under the sea
-	if (object.position.z < braneAt(x, y)) { // Under the water
-		// Floating
-		object.velocity.z += Math.min(Math.pow((braneAt(x, y) - object.position.z) / 10.0, 2), 1.0) * f_float * dt;
-		// Accelerate object if throttle is used
-		object.velocity.x += object.throttle * throttleAccelerate * x_axis.x;
-		object.velocity.y += object.throttle * throttleAccelerate * x_axis.y;
-		object.velocity.z += object.throttle * throttleAccelerate * x_axis.z;
-		// Set damping factor
-		dampingVelocity = 0.1 + 0.0 * Math.min(Math.pow((braneAt(x, y) - object.position.z) / 10.0, 2), 1.0);
-		// Rolling
-		var x_diff = braneAt(x + 1, y) - braneAt(x, y);
-		var y_diff = braneAt(x, y + 1) - braneAt(x, y);
-		object.velocityRolling.roll +=
-		    Math.atan2(z_axis.z * (x_diff * y_axis.x + y_diff * y_axis.y - y_axis.z * interval), interval) / object.mass / 40.0 -
-		    0.2 * Math.sin(object.rolling.roll) * Math.cos(asin(x_axis.z));
-		object.velocityRolling.pitch +=
-		    -Math.atan2(z_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / object.mass / 40.0 -
-		    0.2 * Math.sin(object.rolling.pitch) * Math.cos(asin(y_axis.z));
-		object.velocityRolling.yaw +=
-		    Math.atan2(y_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * interval), interval) / object.mass / 40.0;
-		if (braneInsideOrNot(x, y)) {
-			brane[y * braneSize.width + x] -= object.mass * 0.3;
+	asin(y)
+	{
+		if (-1.0 < y && y < 1.0) {
+			return Math.asin(y);
+		} else if (y > 0) {
+			return 0.25 * Math.PI;
+		} else {
+			return -0.25 * Math.PI;
 		}
 	}
-	// Update position and velocity
-	object.position.x += object.velocity.x * dt;
-	object.position.y += object.velocity.y * dt;
-	object.position.z += object.velocity.z * dt;
-	object.velocity.x -=
-	    object.velocity.x * dampingVelocity * dt;
-	object.velocity.y -=
-	    object.velocity.y * dampingVelocity * dt;
-	object.velocity.z -=
-	    object.velocity.z * dampingVelocity * dt;
-	object.rolling.roll += object.velocityRolling.roll * dt;
-	object.rolling.pitch += object.velocityRolling.pitch * dt;
-	object.rolling.yaw += object.velocityRolling.yaw * dt;
-	object.velocityRolling.roll -= object.velocityRolling.roll * dampingVelocity * dt;
-	object.velocityRolling.pitch -= object.velocityRolling.pitch * dampingVelocity * dt;
-	object.velocityRolling.yaw -= object.velocityRolling.yaw * dampingVelocity * dt;
-	rotate3dObject(object); // Rotate object
-}
 
-function
-makeColormap()
-{
-	var dc = Math.ceil(255 / (colormap_quantize / 2));
-	var i;
-	// Make colormap normal
-	for (i = 0; i <= Math.floor(colormap_quantize / 2); i++) {
-		colormap.normal[i] = 'rgb(0,' + Math.min(255, dc * i) + ',' + Math.max(0, 255 - dc * i) + ')';
-	}
-	for (i = Math.floor(colormap_quantize / 2); i < colormap_quantize; i++) {
-		colormap.normal[i] = 'rgb(' + Math.min(255, dc * i) + ',' + Math.max(0, 255 - dc * i) + ',0)';
-	}
-	// Make colormap bluesea
-	for (i = 0; i < colormap_quantize; i++) {
-		colormap.bluesea[i] = 'rgb(0,' + Math.min(255, dc * i) + ',255)';
-	}
-}
-
-function
-draw()
-{
-	context.clearRect(0, 0, canvas.width, canvas.height);
-	drawBrane();
-	drawXYZVector();
-	// Draw 3D object
-	draw3dObjects();
-	drawThrottle();
-}
-
-function
-drawBrane()
-{
-	var xy = {x: 0, y: 0};
-	var x;
-	var y;
-	var amp;
-	context.strokeStyle = 'blue';
-	for (y = 0; y < braneSize.height; y++) {
-		for (x = 1; x < braneSize.width; x++) {
-			amp = Math.round(2 * Math.max(Math.abs(braneAt(x - 1, y)), Math.abs(braneAt(x, y))));
-			context.strokeStyle = colormap.current[Math.min(colormap_quantize, amp)];
-			context.beginPath();
-			xy = calcView(
-			    (x - 1) * interval,
-			    y * interval,
-			    braneAt(x - 1, y));
-			context.moveTo(xy.x, xy.y);
-			xy = calcView(
-			    x * interval,
-			    y * interval,
-			    braneAt(x, y));
-			context.lineTo(xy.x, xy.y);
-			context.stroke();
+	physics()
+	{
+		for (let y = 0; y < this.braneSize.height; y++) {
+			for (let x = 0; x < this.braneSize.width; x++) {
+				this.velocity[y * this.braneSize.width + x] += this.accelBrane(x, y) * this.dt;
+				this.velocity[y * this.braneSize.width + x] *= 0.98; // damping
+				this.brane_tmp[y * this.braneSize.width + x] = this.brane[y * this.braneSize.width + x] + this.velocity[y * this.braneSize.width + x] * this.dt;
+			}
+		}
+		for (let n = 0; n < this.brane.length; n++) {
+			this.brane[n] = this.brane_tmp[n];
 		}
 	}
-	for (x = 0; x < braneSize.width; x++) {
-		for (y = 1; y < braneSize.height; y++) {
-			amp = Math.round(2 * Math.max(Math.abs(braneAt(x, y - 1)), Math.abs(braneAt(x, y))));
-			context.strokeStyle = colormap.current[Math.min(colormap_quantize, amp)];
-			context.beginPath();
-			xy = calcView(
-			    x * interval,
-			    (y - 1) * interval,
-			    braneAt(x, y - 1));
-			context.moveTo(xy.x, xy.y);
-			xy = calcView(
-			    x * interval,
-			    y * interval,
-			    braneAt(x, y));
-			context.lineTo(xy.x, xy.y);
-			context.stroke();
+
+	accelBrane(x, y)
+	{
+		let interest = this.braneAt(x, y);
+		let a = 0.0;
+		a += this.k_brane * (this.braneAt(x, y - 1) - interest);
+		a += this.k_brane * (this.braneAt(x, y + 1) - interest);
+		a += this.k_brane * (this.braneAt(x - 1, y) - interest);
+		a += this.k_brane * (this.braneAt(x + 1, y) - interest);
+		return a;
+	}
+
+	physicsObjects()
+	{
+		for (let i = 0; i < this.listObjects.length; i++) {
+			this.physicsObject(this.listObjects[i]);
 		}
 	}
-}
 
-function
-drawXYZVector()
-{
-	// Show XYZ coordinate
-	context.lineWidth = 2;
-	context.beginPath();
-	context.moveTo(42, 42);
-	context.strokeStyle = "red";
-	context.lineTo(42 + 42 * field_XYZ.X.x, 42 + 42 * field_XYZ.X.y);
-	var xy = calcXYZOnFieldXYZ(-7, -7, 0);
-	context.lineTo(42 + 42 * field_XYZ.X.x + xy.x, 42 + 42 * field_XYZ.X.y + xy.y);
-	xy = calcXYZOnFieldXYZ(-7, 8, 0);
-	context.lineTo(42 + 42 * field_XYZ.X.x + xy.x, 42 + 42 * field_XYZ.X.y + xy.y);
-	context.stroke();
-	context.beginPath();
-	context.moveTo(42, 42);
-	context.strokeStyle = "lime";
-	context.lineTo(42 + 42 * field_XYZ.Y.x, 42 + 42 * field_XYZ.Y.y);
-	xy = calcXYZOnFieldXYZ(7, -7, 0);
-	context.lineTo(42 + 42 * field_XYZ.Y.x + xy.x, 42 + 42 * field_XYZ.Y.y + xy.y);
-	xy = calcXYZOnFieldXYZ(-8, -7, 0);
-	context.lineTo(42 + 42 * field_XYZ.Y.x + xy.x, 42 + 42 * field_XYZ.Y.y + xy.y);
-	context.stroke();
-	context.beginPath();
-	context.moveTo(42, 42);
-	context.strokeStyle = "blue";
-	context.lineTo(42 + 42 * field_XYZ.Z.x, 42 + 42 * field_XYZ.Z.y);
-	xy = calcXYZOnFieldXYZ(0, 7, -7);
-	context.lineTo(42 + 42 * field_XYZ.Z.x + xy.x, 42 + 42 * field_XYZ.Z.y + xy.y);
-	xy = calcXYZOnFieldXYZ(0, -8, -7);
-	context.lineTo(42 + 42 * field_XYZ.Z.x + xy.x, 42 + 42 * field_XYZ.Z.y + xy.y);
-	context.stroke();
-	context.lineWidth = 1;
-}
-
-function
-draw3dObjects()
-{
-	for (var i = 0; i < listObjects.length; i++) {
-		draw3dObject(listObjects[i]);
-	}
-}
-
-function
-draw3dObject(object)
-{
-	var xy;
-	context.strokeStyle = "white";
-	for (var i = 0; i < object.edges.current.length; i++) {
-		if (object.edges.current.length > 1 &&
-		    object.normalVector[i].x * field_XYZ.X.z + object.normalVector[i].y * field_XYZ.Y.z + object.normalVector[i].z * field_XYZ.Z.z > 0) {;
-			continue;
+	physicsObject(object)
+	{
+		let x_axis = this.rotate3d({x:1, y:0, z:0}, object.rolling);
+		let y_axis = this.rotate3d({x:0, y:1, z:0}, object.rolling);
+		let z_axis = this.rotate3d({x:0, y:0, z:1}, object.rolling);
+		let x = Math.floor(object.position.x / this.interval);
+		let y = Math.floor(object.position.y / this.interval);
+		let dampingVelocity = 0.05;
+		// Gravity
+		object.velocity.z -= this.g * this.dt;
+		// Under the sea
+		if (object.position.z < this.braneAt(x, y)) { // Under the water
+			// Floating
+			object.velocity.z += Math.min(Math.pow((this.braneAt(x, y) - object.position.z) / 10.0, 2), 1.0) * this.f_float * this.dt;
+			// Accelerate object if throttle is used
+			object.velocity.x += object.throttle * this.throttleAccelerate * x_axis.x;
+			object.velocity.y += object.throttle * this.throttleAccelerate * x_axis.y;
+			object.velocity.z += object.throttle * this.throttleAccelerate * x_axis.z;
+			// Set damping factor
+			dampingVelocity = 0.1 + 0.0 * Math.min(Math.pow((this.braneAt(x, y) - object.position.z) / 10.0, 2), 1.0);
+			// Rolling
+			let x_diff = this.braneAt(x + 1, y) - this.braneAt(x, y);
+			let y_diff = this.braneAt(x, y + 1) - this.braneAt(x, y);
+			object.velocityRolling.roll +=
+			    Math.atan2(z_axis.z * (x_diff * y_axis.x + y_diff * y_axis.y - y_axis.z * this.interval), this.interval) / object.mass / 40.0 -
+			    0.2 * Math.sin(object.rolling.roll) * Math.cos(this.asin(x_axis.z));
+			object.velocityRolling.pitch +=
+			    -Math.atan2(z_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * this.interval), this.interval) / object.mass / 40.0 -
+			    0.2 * Math.sin(object.rolling.pitch) * Math.cos(this.asin(y_axis.z));
+			object.velocityRolling.yaw +=
+			    Math.atan2(y_axis.z * (x_diff * x_axis.x + y_diff * x_axis.y - x_axis.z * this.interval), this.interval) / object.mass / 40.0;
+			if (this.braneInsideOrNot(x, y)) {
+				this.brane[y * this.braneSize.width + x] -= object.mass * 0.3;
+			}
 		}
-		context.beginPath();
-		xy = calcView(
-		    object.edges.current[i][0].x + object.position.x,
-		    object.edges.current[i][0].y + object.position.y,
-		    object.edges.current[i][0].z + object.position.z);
-		context.moveTo(xy.x, xy.y);
-		for (var j = 1; j <= object.edges.current[i].length; j++) {
-			xy = calcView(
-			    object.edges.current[i][j % object.edges.current[i].length].x + object.position.x,
-			    object.edges.current[i][j % object.edges.current[i].length].y + object.position.y,
-			    object.edges.current[i][j % object.edges.current[i].length].z + object.position.z);
-			context.lineTo(xy.x, xy.y);
-		}
-		context.stroke();
+		// Update position and velocity
+		object.position.x += object.velocity.x * this.dt;
+		object.position.y += object.velocity.y * this.dt;
+		object.position.z += object.velocity.z * this.dt;
+		object.velocity.x -=
+		    object.velocity.x * dampingVelocity * this.dt;
+		object.velocity.y -=
+		    object.velocity.y * dampingVelocity * this.dt;
+		object.velocity.z -=
+		    object.velocity.z * dampingVelocity * this.dt;
+		object.rolling.roll += object.velocityRolling.roll * this.dt;
+		object.rolling.pitch += object.velocityRolling.pitch * this.dt;
+		object.rolling.yaw += object.velocityRolling.yaw * this.dt;
+		object.velocityRolling.roll -= object.velocityRolling.roll * dampingVelocity * this.dt;
+		object.velocityRolling.pitch -= object.velocityRolling.pitch * dampingVelocity * this.dt;
+		object.velocityRolling.yaw -= object.velocityRolling.yaw * dampingVelocity * this.dt;
+		this.rotate3dObject(object); // Rotate object
 	}
-}
 
-function
-drawThrottle()
-{
-	var throttleSteps = boatThrottleMax + Math.floor(boatThrottleMax / 2.0) + 1;
-	var throttleStepInterval = 5;
-	context.lineWidth = 2;
-	// Write ruler
-	context.beginPath();
-	context.moveTo(100, 10);
-	context.strokeStyle = "white";
-	context.lineTo(100, 10 + throttleStepInterval * (throttleSteps - 1));
-	for (var i = 0; i < throttleSteps; i++) {
-		context.moveTo(100, 10 + throttleStepInterval * i);
-		context.lineTo(105, 10 + throttleStepInterval * i);
-		if (i == boatThrottleMax) {
-			context.lineTo(110, 10 + throttleStepInterval * i);
+	makeColormap()
+	{
+		let dc = Math.ceil(255 / (this.colormapQuantize / 2));
+		// Make colormap normal
+		for (let i = 0; i <= Math.floor(this.colormapQuantize / 2); i++) {
+			this.colormap.normal[i] = 'rgb(0,' + Math.min(255, dc * i) + ',' + Math.max(0, 255 - dc * i) + ')';
+		}
+		for (let i = Math.floor(this.colormapQuantize / 2); i < this.colormapQuantize; i++) {
+			this.colormap.normal[i] = 'rgb(' + Math.min(255, dc * i) + ',' + Math.max(0, 255 - dc * i) + ',0)';
+		}
+		// Make colormap bluesea
+		for (let i = 0; i < this.colormapQuantize; i++) {
+			this.colormap.bluesea[i] = 'rgb(0,' + Math.min(255, dc * i) + ',255)';
 		}
 	}
-	context.stroke();
-	// Write current throttle
-	context.strokeStyle = "red";
-	context.beginPath();
-	context.moveTo(112, 10 + throttleStepInterval * (boatThrottleMax - boat.throttle));
-	context.lineTo(132, 10 + throttleStepInterval * (boatThrottleMax - boat.throttle));
-	context.stroke();
-	// Reset lineWidth
-	context.lineWidth = 1;
-}
 
-function
-make3dObject(objectEdges, position, rolling, velocity, velocityRolling, mass)
-{
-	var object = {
-		position: {x: position.x, y: position.y, z: position.z},
-		rolling: {roll: rolling.roll, pitch: rolling.pitch, yaw: rolling.yaw},
-		edges: {origin: new Array(objectEdges.length), current: new Array(objectEdges.length)},
-		normalVector: new Array(objectEdges.length),
-		velocity: {x: velocity.x, y: velocity.y, z: velocity.z},
-		velocityRolling: {roll: velocityRolling.roll, pitch: velocityRolling.pitch, yaw: velocityRolling.yaw},
-		mass: mass,
-		throttle: 0.0};
-	// Compute normal vector
-	for (var i = 0; i < objectEdges.length; i++) {
-		object.edges.origin[i] = new Array(objectEdges[i].length);
-		object.edges.current[i] = new Array(objectEdges[i].length);
-		for (var j = 0; j < objectEdges[i].length; j++) {
-			object.edges.origin[i][j] = objectEdges[i][j];
-			object.edges.current[i][j] = objectEdges[i][j];
-		}
-		object.normalVector[i] = calcNormalVector(objectEdges[i]);
+	draw()
+	{
+		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+		this.drawBrane();
+		this.drawXYZVector();
+		// Draw 3D object
+		this.draw3dObjects();
+		this.drawThrottle();
 	}
-	return object;
-}
 
-function
-collapseBoat()
-{
-	collapse3dObject(boat);
-}
-
-function
-collapse3dObject(object)
-{
-	var index = listObjects.indexOf(object);
-	listObjects.splice(index, 1);
-	for (var i = 0; i < object.edges.origin.length; i++) {
-		for (var j = 1; j <= object.edges.origin[i].length; j++) {
-			var edge = [object.edges.origin[i][j - 1], object.edges.origin[i][j % object.edges.origin[i].length]];
-			var norm = norm_XYZ({x: edge[1].x - edge[0].x, y: edge[1].y - edge[0].y, z: edge[1].z - edge[0].z});
-			var newObject = make3dObject(
-			    [[{x: -norm / 2, y: 0, z: 0}, {x: norm /2, y: 0, z: 0}]],
-			    object.position,
-			    object.rolling,
-			    {x: 100 * (Math.random() - 0.5), y: 100 * (Math.random() - 0.5), z: 100 * Math.random()},
-			    {roll: 2.0 * Math.PI * (Math.random() - 0.5), pitch: 2.0 * Math.PI * (Math.random() - 0.5), yaw: 2.0 * Math.PI * (Math.random() - 0.5)},
-			    object.mass / object.edges.origin.length);
-			listObjects.push(newObject);
+	drawBrane()
+	{
+		let xy = {x: 0, y: 0};
+		let amp;
+		this.context.strokeStyle = 'blue';
+		for (let y = 0; y < this.braneSize.height; y++) {
+			for (let x = 1; x < this.braneSize.width; x++) {
+				amp = Math.round(2 * Math.max(Math.abs(this.braneAt(x - 1, y)), Math.abs(this.braneAt(x, y))));
+				this.context.strokeStyle = this.colormap.current[Math.min(this.colormapQuantize, amp)];
+				this.context.beginPath();
+				xy = this.calcView(
+				    (x - 1) * this.interval,
+				    y * this.interval,
+				    this.braneAt(x - 1, y),
+				    this.scale,
+				    this.viewOffset,
+				    this.fieldXYZ);
+				this.context.moveTo(xy.x, xy.y);
+				xy = this.calcView(
+				    x * this.interval,
+				    y * this.interval,
+				    this.braneAt(x, y),
+				    this.scale,
+				    this.viewOffset,
+				    this.fieldXYZ);
+				this.context.lineTo(xy.x, xy.y);
+				this.context.stroke();
+			}
+		}
+		for (let x = 0; x < this.braneSize.width; x++) {
+			for (let y = 1; y < this.braneSize.height; y++) {
+				amp = Math.round(2 * Math.max(Math.abs(this.braneAt(x, y - 1)), Math.abs(this.braneAt(x, y))));
+				this.context.strokeStyle = this.colormap.current[Math.min(this.colormapQuantize, amp)];
+				this.context.beginPath();
+				xy = this.calcView(
+				    x * this.interval,
+				    (y - 1) * this.interval,
+				    this.braneAt(x, y - 1),
+				    this.scale,
+				    this.viewOffset,
+				    this.fieldXYZ);
+				this.context.moveTo(xy.x, xy.y);
+				xy = this.calcView(
+				    x * this.interval,
+				    y * this.interval,
+				    this.braneAt(x, y),
+				    this.scale,
+				    this.viewOffset,
+				    this.fieldXYZ);
+				this.context.lineTo(xy.x, xy.y);
+				this.context.stroke();
+			}
 		}
 	}
-}
 
-function
-calcNormalVector(edges)
-{
-	var vector = {x: 0, y: 0, z: 0};
-	if (edges.length < 3) {
+	drawXYZVector()
+	{
+		// Show XYZ coordinate
+		this.context.lineWidth = 2;
+		this.context.beginPath();
+		this.context.moveTo(42, 42);
+		this.context.strokeStyle = "red";
+		this.context.lineTo(42 + 42 * this.fieldXYZ.X.x, 42 + 42 * this.fieldXYZ.X.y);
+		let xy = this.calcXYZOnFieldXYZ(-7, -7, 0, this.fieldXYZ);
+		this.context.lineTo(42 + 42 * this.fieldXYZ.X.x + xy.x, 42 + 42 * this.fieldXYZ.X.y + xy.y);
+		xy = this.calcXYZOnFieldXYZ(-7, 8, 0, this.fieldXYZ);
+		this.context.lineTo(42 + 42 * this.fieldXYZ.X.x + xy.x, 42 + 42 * this.fieldXYZ.X.y + xy.y);
+		this.context.stroke();
+		this.context.beginPath();
+		this.context.moveTo(42, 42);
+		this.context.strokeStyle = "lime";
+		this.context.lineTo(42 + 42 * this.fieldXYZ.Y.x, 42 + 42 * this.fieldXYZ.Y.y);
+		xy = this.calcXYZOnFieldXYZ(7, -7, 0, this.fieldXYZ);
+		this.context.lineTo(42 + 42 * this.fieldXYZ.Y.x + xy.x, 42 + 42 * this.fieldXYZ.Y.y + xy.y);
+		xy = this.calcXYZOnFieldXYZ(-8, -7, 0, this.fieldXYZ);
+		this.context.lineTo(42 + 42 * this.fieldXYZ.Y.x + xy.x, 42 + 42 * this.fieldXYZ.Y.y + xy.y);
+		this.context.stroke();
+		this.context.beginPath();
+		this.context.moveTo(42, 42);
+		this.context.strokeStyle = "blue";
+		this.context.lineTo(42 + 42 * this.fieldXYZ.Z.x, 42 + 42 * this.fieldXYZ.Z.y);
+		xy = this.calcXYZOnFieldXYZ(0, 7, -7, this.fieldXYZ);
+		this.context.lineTo(42 + 42 * this.fieldXYZ.Z.x + xy.x, 42 + 42 * this.fieldXYZ.Z.y + xy.y);
+		xy = this.calcXYZOnFieldXYZ(0, -8, -7, this.fieldXYZ);
+		this.context.lineTo(42 + 42 * this.fieldXYZ.Z.x + xy.x, 42 + 42 * this.fieldXYZ.Z.y + xy.y);
+		this.context.stroke();
+		this.context.lineWidth = 1;
+	}
+
+	draw3dObjects()
+	{
+		for (let i = 0; i < this.listObjects.length; i++) {
+			this.draw3dObject(this.listObjects[i]);
+		}
+	}
+
+	draw3dObject(object)
+	{
+		let xy;
+		this.context.strokeStyle = "white";
+		for (let i = 0; i < object.edges.current.length; i++) {
+			if (object.edges.current.length > 1 &&
+			    object.normalVector[i].x * this.fieldXYZ.X.z + object.normalVector[i].y * this.fieldXYZ.Y.z + object.normalVector[i].z * this.fieldXYZ.Z.z > 0) {;
+				continue;
+			}
+			this.context.beginPath();
+			xy = this.calcView(
+			    object.edges.current[i][0].x + object.position.x,
+			    object.edges.current[i][0].y + object.position.y,
+			    object.edges.current[i][0].z + object.position.z,
+			    this.scale,
+			    this.viewOffset,
+			    this.fieldXYZ);
+			this.context.moveTo(xy.x, xy.y);
+			for (let j = 1; j <= object.edges.current[i].length; j++) {
+				xy = this.calcView(
+				    object.edges.current[i][j % object.edges.current[i].length].x + object.position.x,
+				    object.edges.current[i][j % object.edges.current[i].length].y + object.position.y,
+				    object.edges.current[i][j % object.edges.current[i].length].z + object.position.z,
+				    this.scale,
+				    this.viewOffset,
+				    this.fieldXYZ);
+				this.context.lineTo(xy.x, xy.y);
+			}
+			this.context.stroke();
+		}
+	}
+
+	drawThrottle()
+	{
+		let throttleSteps = this.boatThrottleMax + Math.floor(this.boatThrottleMax / 2.0) + 1;
+		let throttleStepInterval = 5;
+		this.context.lineWidth = 2;
+		// Write ruler
+		this.context.beginPath();
+		this.context.moveTo(100, 10);
+		this.context.strokeStyle = "white";
+		this.context.lineTo(100, 10 + throttleStepInterval * (throttleSteps - 1));
+		for (let i = 0; i < throttleSteps; i++) {
+			this.context.moveTo(100, 10 + throttleStepInterval * i);
+			this.context.lineTo(105, 10 + throttleStepInterval * i);
+			if (i == this.boatThrottleMax) {
+				this.context.lineTo(110, 10 + throttleStepInterval * i);
+			}
+		}
+		this.context.stroke();
+		// Write current throttle
+		this.context.strokeStyle = "red";
+		this.context.beginPath();
+		this.context.moveTo(112, 10 + throttleStepInterval * (this.boatThrottleMax - this.boat.throttle));
+		this.context.lineTo(132, 10 + throttleStepInterval * (this.boatThrottleMax - this.boat.throttle));
+		this.context.stroke();
+		// Reset lineWidth
+		this.context.lineWidth = 1;
+	}
+
+	make3dObject(objectEdges, position, rolling, velocity, velocityRolling, mass)
+	{
+		let object = {
+			position: {x: position.x, y: position.y, z: position.z},
+			rolling: {roll: rolling.roll, pitch: rolling.pitch, yaw: rolling.yaw},
+			edges: {origin: new Array(objectEdges.length), current: new Array(objectEdges.length)},
+			normalVector: new Array(objectEdges.length),
+			velocity: {x: velocity.x, y: velocity.y, z: velocity.z},
+			velocityRolling: {roll: velocityRolling.roll, pitch: velocityRolling.pitch, yaw: velocityRolling.yaw},
+			mass: mass,
+			throttle: 0.0};
+		// Compute normal vector
+		for (let i = 0; i < objectEdges.length; i++) {
+			object.edges.origin[i] = new Array(objectEdges[i].length);
+			object.edges.current[i] = new Array(objectEdges[i].length);
+			for (let j = 0; j < objectEdges[i].length; j++) {
+				object.edges.origin[i][j] = objectEdges[i][j];
+				object.edges.current[i][j] = objectEdges[i][j];
+			}
+			object.normalVector[i] = this.calcNormalVector(objectEdges[i]);
+		}
+		return object;
+	}
+
+	collapseBoat()
+	{
+		this.collapse3dObject(this.boat);
+	}
+
+	collapse3dObject(object)
+	{
+		let index = this.listObjects.indexOf(object);
+		this.listObjects.splice(index, 1);
+		for (let i = 0; i < object.edges.origin.length; i++) {
+			for (let j = 1; j <= object.edges.origin[i].length; j++) {
+				let edge = [object.edges.origin[i][j - 1], object.edges.origin[i][j % object.edges.origin[i].length]];
+				let norm = this.normXYZ({x: edge[1].x - edge[0].x, y: edge[1].y - edge[0].y, z: edge[1].z - edge[0].z});
+				let newObject = this.make3dObject(
+				    [[{x: -norm / 2, y: 0, z: 0}, {x: norm /2, y: 0, z: 0}]],
+				    object.position,
+				    object.rolling,
+				    {x: 100 * (Math.random() - 0.5), y: 100 * (Math.random() - 0.5), z: 100 * Math.random()},
+				    {roll: 2.0 * Math.PI * (Math.random() - 0.5), pitch: 2.0 * Math.PI * (Math.random() - 0.5), yaw: 2.0 * Math.PI * (Math.random() - 0.5)},
+				    object.mass / object.edges.origin.length);
+				this.listObjects.push(newObject);
+			}
+		}
+	}
+
+	calcNormalVector(edges)
+	{
+		let vector = {x: 0, y: 0, z: 0};
+		if (edges.length < 3) {
+			return vector;
+		}
+		let a = {
+		    x: edges[2].x - edges[1].x,
+		    y: edges[2].y - edges[1].y,
+		    z: edges[2].z - edges[1].z};
+		let b = {
+		    x: edges[0].x - edges[1].x,
+		    y: edges[0].y - edges[1].y,
+		    z: edges[0].z - edges[1].z};
+		vector.x = a.y * b.z - a.z * b.y;
+		vector.y = a.z * b.x - a.x * b.z;
+		vector.z = a.x * b.y - a.y * b.x;
+		let norm = this.normXYZ(vector);
+		if (norm > 0.01) {
+			vector.x /= norm;
+			vector.y /= norm;
+			vector.z /= norm;
+		}
 		return vector;
 	}
-	var a = {
-	    x: edges[2].x - edges[1].x,
-	    y: edges[2].y - edges[1].y,
-	    z: edges[2].z - edges[1].z};
-	var b = {
-	    x: edges[0].x - edges[1].x,
-	    y: edges[0].y - edges[1].y,
-	    z: edges[0].z - edges[1].z};
-	vector.x = a.y * b.z - a.z * b.y;
-	vector.y = a.z * b.x - a.x * b.z;
-	vector.z = a.x * b.y - a.y * b.x;
-	var norm = norm_XYZ(vector);
-	if (norm > 0.01) {
-		vector.x /= norm;
-		vector.y /= norm;
-		vector.z /= norm;
+
+	calcXYZOnFieldXYZ(x, y, z, fieldXYZ)
+	{
+		let xy = {x: 0, y: 0};
+		xy.x = x * fieldXYZ.X.x + y * fieldXYZ.Y.x + z * fieldXYZ.Z.x;
+		xy.y = x * fieldXYZ.X.y + y * fieldXYZ.Y.y + z * fieldXYZ.Z.y;
+		return xy;
 	}
-	return vector;
-}
 
-function
-calcXYZOnFieldXYZ(x, y, z)
-{
-	var xy = {x: 0, y: 0};
-	xy.x = x * field_XYZ.X.x + y * field_XYZ.Y.x + z * field_XYZ.Z.x;
-	xy.y = x * field_XYZ.X.y + y * field_XYZ.Y.y + z * field_XYZ.Z.y;
-	return xy;
-}
-
-function
-calcView(x, y, z)
-{
-	var xy = {x: 0, y: 0};
-	var X = x - view_offset.x;
-	var Y = y - view_offset.y;
-	var Z = z - view_offset.z;
-	xy.x = scale * (X * field_XYZ.X.x + Y * field_XYZ.Y.x + Z * field_XYZ.Z.x) + display_offset.x;
-	xy.y = scale * (X * field_XYZ.X.y + Y * field_XYZ.Y.y + Z * field_XYZ.Z.y) + display_offset.y;
-	return xy;
-}
-
-function
-norm_XYZ(xyz)
-{
-	return Math.sqrt(xyz.x * xyz.x + xyz.y * xyz.y + xyz.z * xyz.z);
-}
-
-function
-innerProduct_XYZ(A, B)
-{
-	return A.x * B.x + A.y * B.y + A.z * B.z;
-}
-
-function
-normalize_XYZ(xyz)
-{
-	var norm = norm_XYZ(xyz);
-	if (norm > 0.1) {
-		xyz.x /= norm;
-		xyz.y /= norm;
-		xyz.z /= norm;
+	calcView(x, y, z, scale, viewOffset, fieldXYZ)
+	{
+		let xy = {x: 0, y: 0};
+		let X = x - this.viewOffset.x;
+		let Y = y - this.viewOffset.y;
+		let Z = z - this.viewOffset.z;
+		xy.x = scale * (X * this.fieldXYZ.X.x + Y * this.fieldXYZ.Y.x + Z * this.fieldXYZ.Z.x) + this.displayOffset.x;
+		xy.y = scale * (X * this.fieldXYZ.X.y + Y * this.fieldXYZ.Y.y + Z * this.fieldXYZ.Z.y) + this.displayOffset.y;
+		return xy;
 	}
-	return xyz;
-}
 
-function
-rotate(x, y, XYZ)
-{
-	var ret = {x: 0, y: 0, z: 0};
-	ret.x = XYZ.x * Math.cos(x) - XYZ.z * Math.sin(x);
-	ret.z = XYZ.z * Math.cos(x) + XYZ.x * Math.sin(x);
-	ret.y = XYZ.y * Math.cos(y) - ret.z * Math.sin(y);
-	ret.z = ret.z * Math.cos(y) + XYZ.y * Math.sin(y);
-	return ret;
-}
-
-function
-rot_field_XYZ(x, y)
-{
-	field_XYZ.X = rotate(x, y, field_XYZ.X);
-	field_XYZ.Y = rotate(x, y, field_XYZ.Y);
-	field_XYZ.Z = rotate(x, y, field_XYZ.Z);
-	// Normalize
-	field_XYZ.X = normalize_XYZ(field_XYZ.X);
-	field_XYZ.Y = normalize_XYZ(field_XYZ.Y);
-	field_XYZ.Z = normalize_XYZ(field_XYZ.Z);
-	// Reduce residue of Y
-	var a = innerProduct_XYZ(field_XYZ.X, field_XYZ.Y);
-	field_XYZ.Y.x -= a * field_XYZ.X.x;
-	field_XYZ.Y.y -= a * field_XYZ.X.y;
-	field_XYZ.Y.z -= a * field_XYZ.X.z;
-	// Reduce residue of Z
-	a = innerProduct_XYZ(field_XYZ.X, field_XYZ.Z);
-	field_XYZ.Z.x -= a * field_XYZ.X.x;
-	field_XYZ.Z.y -= a * field_XYZ.X.y;
-	field_XYZ.Z.z -= a * field_XYZ.X.z;
-	a = innerProduct_XYZ(field_XYZ.Y, field_XYZ.Z);
-	field_XYZ.Z.x -= a * field_XYZ.Y.x;
-	field_XYZ.Z.y -= a * field_XYZ.Y.y;
-	field_XYZ.Z.z -= a * field_XYZ.Y.z;
-}
-
-function
-rot_field_XYZ_onZ(yaw, y)
-{
-	var X = {x: 0, y: 0, z: 0};
-	var Y = {x: 0, y: 0, z: 0};
-	X = field_XYZ.X;
-	Y = field_XYZ.Y;
-	var cos = Math.cos(yaw);
-	var sin = Math.sin(yaw);
-	if (field_XYZ.Z.y < 0.0) {
-		field_XYZ.X.x = X.x * cos + Y.x * sin;
-		field_XYZ.X.y = X.y * cos + Y.y * sin;
-		field_XYZ.X.z = X.z * cos + Y.z * sin;
-		field_XYZ.Y.x = Y.x * cos - X.x * sin;
-		field_XYZ.Y.y = Y.y * cos - X.y * sin;
-		field_XYZ.Y.z = Y.z * cos - X.z * sin;
-	} else {
-		field_XYZ.X.x = X.x * cos - Y.x * sin;
-		field_XYZ.X.y = X.y * cos - Y.y * sin;
-		field_XYZ.X.z = X.z * cos - Y.z * sin;
-		field_XYZ.Y.x = Y.x * cos + X.x * sin;
-		field_XYZ.Y.y = Y.y * cos + X.y * sin;
-		field_XYZ.Y.z = Y.z * cos + X.z * sin;
+	normXYZ(xyz)
+	{
+		return Math.sqrt(xyz.x * xyz.x + xyz.y * xyz.y + xyz.z * xyz.z);
 	}
-	// normalize
-	var norm = norm_XYZ(field_XYZ.X);
-	if (norm > 0.1) {
-		field_XYZ.X.x /= norm;
-		field_XYZ.X.y /= norm;
-		field_XYZ.X.z /= norm;
+
+	innerProductXYZ(A, B)
+	{
+		return A.x * B.x + A.y * B.y + A.z * B.z;
 	}
-	// rot with drag on Y axis same as normal rotation
-	rot_field_XYZ(0, y);
-}
 
-function
-rotate3d(rolling, XYZ)
-{
-	var di_r = {x: 0, y: 0, z: 0};
-	var di_p = {x: 0, y: 0, z: 0};
-	var di_y = {x: 0, y: 0, z: 0};
-	var di_py = {x: 0, y: 0, z: 0};
-	var di = {x: 0, y: 0, z: 0};
-	// Yaw
-	di_y.x =
-	    XYZ.x * Math.cos(rolling.yaw) -
-	    XYZ.y * Math.sin(rolling.yaw) -
-	    XYZ.x;
-	di_y.y =
-	    XYZ.y * Math.cos(rolling.yaw) +
-	    XYZ.x * Math.sin(rolling.yaw) -
-	    XYZ.y;
-	// Pitch
-	di_p.x =
-	    XYZ.x * Math.cos(rolling.pitch) +
-	    XYZ.z * Math.sin(rolling.pitch) -
-	    XYZ.x;
-	di_p.z =
-	    XYZ.z * Math.cos(rolling.pitch) -
-	    XYZ.x * Math.sin(rolling.pitch) -
-	    XYZ.z;
-	di_py.x = di_p.x + di_y.x * Math.cos(rolling.pitch);
-	di_py.y = di_y.y;
-	di_py.z = di_p.z - di_y.x * Math.sin(rolling.pitch);
-	// Roll
-	di_r.y =
-	    XYZ.y * Math.cos(rolling.roll) -
-	    XYZ.z * Math.sin(rolling.roll) -
-	    XYZ.y;
-	di_r.z =
-	    XYZ.z * Math.cos(rolling.roll) +
-	    XYZ.y * Math.sin(rolling.roll) -
-	    XYZ.z;
-	di.x = di_py.x;
-	di.y =
-	    di_r.y +
-	    di_py.y * Math.cos(rolling.roll) -
-	    di_py.z * Math.sin(rolling.roll);
-	di.z =
-	    di_r.z +
-	    di_py.z * Math.cos(rolling.roll) +
-	    di_py.y * Math.sin(rolling.roll);
-	return {x: XYZ.x + di.x, y: XYZ.y + di.y, z: XYZ.z + di.z};
-}
-
-function
-rotate3dObject(object)
-{
-	for (var i = 0; i < object.edges.origin.length; i++) {
-		for (var j = 0; j < object.edges.origin[i].length; j++) {
-			object.edges.current[i][j] = rotate3d(object.rolling, object.edges.origin[i][j]);
+	normalizeXYZ(XYZ)
+	{
+		let norm = this.normXYZ(XYZ);
+		if (norm > 0.1) {
+			XYZ.x /= norm;
+			XYZ.y /= norm;
+			XYZ.z /= norm;
 		}
-		object.normalVector[i] = calcNormalVector(object.edges.current[i]);
+		return XYZ;
 	}
-}
 
-function
-mouseClick(event)
-{
-	event.preventDefault();
-	if (event.type === "mousedown") {
-		prev_clientX = event.clientX;
-		prev_clientY = event.clientY;
-	} else if (event.type === "touchstart") {
-		prev_clientX = event.touches[0].clientX;
-		prev_clientY = event.touches[0].clientY;
+	rotate(XYZ, x, y)
+	{
+		let ret = {x: 0, y: 0, z: 0};
+		ret.x = XYZ.x * Math.cos(x) - XYZ.z * Math.sin(x);
+		ret.z = XYZ.z * Math.cos(x) + XYZ.x * Math.sin(x);
+		ret.y = XYZ.y * Math.cos(y) - ret.z * Math.sin(y);
+		ret.z = ret.z * Math.cos(y) + XYZ.y * Math.sin(y);
+		return ret;
 	}
-}
 
-function
-mouseMove(event)
-{
-	event.preventDefault();
-	if (event.type === "mousemove") {
-		if ((event.buttons & 1) != 0) {
-			rot_field_XYZ_onZ(
-			    2.0 * Math.PI * (event.clientX - prev_clientX) / rot_degree,
-			    2.0 * Math.PI * (event.clientY - prev_clientY) / rot_degree);
-		} else if ((event.buttons & 4) != 0) {
-			var move = {x: 0, y: 0}
-			move.x = event.clientX - prev_clientX;
-			move.y = event.clientY - prev_clientY;
-			view_offset.x -= move.x * field_XYZ.X.x + move.y * field_XYZ.X.y;
-			view_offset.y -= move.x * field_XYZ.Y.x + move.y * field_XYZ.Y.y;
-			view_offset.z -= move.x * field_XYZ.Z.x + move.y * field_XYZ.Z.y;
+	rotXYZ(XYZ, x, y)
+	{
+		XYZ.X = this.rotate(XYZ.X, x, y);
+		XYZ.Y = this.rotate(XYZ.Y, x, y);
+		XYZ.Z = this.rotate(XYZ.Z, x, y);
+		// Normalize
+		XYZ.X = this.normalizeXYZ(XYZ.X);
+		XYZ.Y = this.normalizeXYZ(XYZ.Y);
+		XYZ.Z = this.normalizeXYZ(XYZ.Z);
+		// Reduce residue of Y
+		let a = this.innerProductXYZ(XYZ.X, XYZ.Y);
+		XYZ.Y.x -= a * XYZ.X.x;
+		XYZ.Y.y -= a * XYZ.X.y;
+		XYZ.Y.z -= a * XYZ.X.z;
+		// Reduce residue of Z
+		a = this.innerProductXYZ(XYZ.X, XYZ.Z);
+		XYZ.Z.x -= a * XYZ.X.x;
+		XYZ.Z.y -= a * XYZ.X.y;
+		XYZ.Z.z -= a * XYZ.X.z;
+		a = this.innerProductXYZ(XYZ.Y, XYZ.Z);
+		XYZ.Z.x -= a * XYZ.Y.x;
+		XYZ.Z.y -= a * XYZ.Y.y;
+		XYZ.Z.z -= a * XYZ.Y.z;
+	}
+
+	rotXYZOnZ(XYZ, yaw, y)
+	{
+		let X = {x: 0, y: 0, z: 0};
+		let Y = {x: 0, y: 0, z: 0};
+		X = XYZ.X;
+		Y = XYZ.Y;
+		let cos = Math.cos(yaw);
+		let sin = Math.sin(yaw);
+		if (XYZ.Z.y < 0.0) {
+			XYZ.X.x = X.x * cos + Y.x * sin;
+			XYZ.X.y = X.y * cos + Y.y * sin;
+			XYZ.X.z = X.z * cos + Y.z * sin;
+			XYZ.Y.x = Y.x * cos - X.x * sin;
+			XYZ.Y.y = Y.y * cos - X.y * sin;
+			XYZ.Y.z = Y.z * cos - X.z * sin;
+		} else {
+			XYZ.X.x = X.x * cos - Y.x * sin;
+			XYZ.X.y = X.y * cos - Y.y * sin;
+			XYZ.X.z = X.z * cos - Y.z * sin;
+			XYZ.Y.x = Y.x * cos + X.x * sin;
+			XYZ.Y.y = Y.y * cos + X.y * sin;
+			XYZ.Y.z = Y.z * cos + X.z * sin;
 		}
-		prev_clientX = event.clientX;
-		prev_clientY = event.clientY;
-	} else if (event.type === "touchmove") {
-		if (event.touches.length == 1) {
-			rot_field_XYZ_onZ(
-			    2.0 * Math.PI * (event.touches[0].clientX - prev_clientX) / rot_degree,
-			    2.0 * Math.PI * (event.touches[0].clientY - prev_clientY) / rot_degree);
-		} else if (event.touches.length == 2) {
-			var move = {x: 0, y: 0}
-			move.x = event.touches[0].clientX - prev_clientX;
-			move.y = event.touches[0].clientY - prev_clientY;
-			view_offset.x -= move.x * field_XYZ.X.x + move.y * field_XYZ.X.y;
-			view_offset.y -= move.x * field_XYZ.Y.x + move.y * field_XYZ.Y.y;
-			view_offset.z -= move.x * field_XYZ.Z.x + move.y * field_XYZ.Z.y;
+		// normalize
+		let norm = this.normXYZ(XYZ.X);
+		if (norm > 0.1) {
+			XYZ.X.x /= norm;
+			XYZ.X.y /= norm;
+			XYZ.X.z /= norm;
 		}
-		prev_clientX = event.touches[0].clientX;
-		prev_clientY = event.touches[0].clientY;
+		// rot with drag on Y axis same as normal rotation
+		this.rotXYZ(XYZ, 0, y);
 	}
-}
 
-function
-keyDown(event)
-{
-	event.preventDefault();
-	switch (event.key) {
-		case "ArrowUp":
-			if (boat.throttle < boatThrottleMax) {
-				boat.throttle++;
+	rotate3d(XYZ, rolling)
+	{
+		let di_r = {x: 0, y: 0, z: 0};
+		let di_p = {x: 0, y: 0, z: 0};
+		let di_y = {x: 0, y: 0, z: 0};
+		let di_py = {x: 0, y: 0, z: 0};
+		let di = {x: 0, y: 0, z: 0};
+		// Yaw
+		di_y.x =
+		    XYZ.x * Math.cos(rolling.yaw) -
+		    XYZ.y * Math.sin(rolling.yaw) -
+		    XYZ.x;
+		di_y.y =
+		    XYZ.y * Math.cos(rolling.yaw) +
+		    XYZ.x * Math.sin(rolling.yaw) -
+		    XYZ.y;
+		// Pitch
+		di_p.x =
+		    XYZ.x * Math.cos(rolling.pitch) +
+		    XYZ.z * Math.sin(rolling.pitch) -
+		    XYZ.x;
+		di_p.z =
+		    XYZ.z * Math.cos(rolling.pitch) -
+		    XYZ.x * Math.sin(rolling.pitch) -
+		    XYZ.z;
+		di_py.x = di_p.x + di_y.x * Math.cos(rolling.pitch);
+		di_py.y = di_y.y;
+		di_py.z = di_p.z - di_y.x * Math.sin(rolling.pitch);
+		// Roll
+		di_r.y =
+		    XYZ.y * Math.cos(rolling.roll) -
+		    XYZ.z * Math.sin(rolling.roll) -
+		    XYZ.y;
+		di_r.z =
+		    XYZ.z * Math.cos(rolling.roll) +
+		    XYZ.y * Math.sin(rolling.roll) -
+		    XYZ.z;
+		di.x = di_py.x;
+		di.y =
+		    di_r.y +
+		    di_py.y * Math.cos(rolling.roll) -
+		    di_py.z * Math.sin(rolling.roll);
+		di.z =
+		    di_r.z +
+		    di_py.z * Math.cos(rolling.roll) +
+		    di_py.y * Math.sin(rolling.roll);
+		return {x: XYZ.x + di.x, y: XYZ.y + di.y, z: XYZ.z + di.z};
+	}
+
+	rotate3dObject(object)
+	{
+		for (let i = 0; i < object.edges.origin.length; i++) {
+			for (let j = 0; j < object.edges.origin[i].length; j++) {
+				object.edges.current[i][j] = this.rotate3d( 
+				    object.edges.origin[i][j],
+				    object.rolling);
 			}
-			break;
-		case "ArrowDown":
-			if (boat.throttle > -Math.floor(boatThrottleMax / 2.0)) {
-				boat.throttle--;
+			object.normalVector[i] = this.calcNormalVector(object.edges.current[i]);
+		}
+	}
+
+	mouseClick(event)
+	{
+		event.preventDefault();
+		if (event.type === "mousedown") {
+			this.prev_clientX = event.clientX;
+			this.prev_clientY = event.clientY;
+		} else if (event.type === "touchstart") {
+			this.prev_clientX = event.touches[0].clientX;
+			this.prev_clientY = event.touches[0].clientY;
+		}
+	}
+
+	mouseMove(event)
+	{
+		event.preventDefault();
+		if (event.type === "mousemove") {
+			if ((event.buttons & 1) != 0) {
+				this.rotXYZOnZ(this.fieldXYZ,
+				    2.0 * Math.PI * (event.clientX - this.prev_clientX) / this.rotDegree,
+				    2.0 * Math.PI * (event.clientY - this.prev_clientY) / this.rotDegree);
+			} else if ((event.buttons & 4) != 0) {
+				let move = {x: 0, y: 0}
+				move.x = event.clientX - this.prev_clientX;
+				move.y = event.clientY - this.prev_clientY;
+				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
+				this.viewOffset.y -= move.x * this.fieldXYZ.Y.x + move.y * this.fieldXYZ.Y.y;
+				this.viewOffset.z -= move.x * this.fieldXYZ.Z.x + move.y * this.fieldXYZ.Z.y;
 			}
-			break;
-		case "ArrowLeft":
-			boat.velocityRolling.yaw += Math.PI * 0.5 / 180.0;
-			break;
-		case "ArrowRight":
-			boat.velocityRolling.yaw -= Math.PI * 0.5 / 180.0;
-			break;
+			this.prev_clientX = event.clientX;
+			this.prev_clientY = event.clientY;
+		} else if (event.type === "touchmove") {
+			if (event.touches.length == 1) {
+				this.rotXYZOnZ(this.fieldXYZ,
+				    2.0 * Math.PI * (event.touches[0].clientX - this.prev_clientX) / this.rotDegree,
+				    2.0 * Math.PI * (event.touches[0].clientY - this.prev_clientY) / this.rotDegree);
+			} else if (event.touches.length == 2) {
+				let move = {x: 0, y: 0}
+				move.x = event.touches[0].clientX - this.prev_clientX;
+				move.y = event.touches[0].clientY - this.prev_clientY;
+				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
+				this.viewOffset.y -= move.x * this.fieldXYZ.Y.x + move.y * this.fieldXYZ.Y.y;
+				this.viewOffset.z -= move.x * this.fieldXYZ.Z.x + move.y * this.fieldXYZ.Z.y;
+			}
+			this.prev_clientX = event.touches[0].clientX;
+			this.prev_clientY = event.touches[0].clientY;
+		}
+	}
+
+	keyDown(event)
+	{
+		event.preventDefault();
+		switch (event.key) {
+			case "ArrowUp":
+				if (this.boat.throttle < this.boatThrottleMax) {
+					this.boat.throttle++;
+				}
+				break;
+			case "ArrowDown":
+				if (this.boat.throttle > -Math.floor(this.boatThrottleMax / 2.0)) {
+					this.boat.throttle--;
+				}
+				break;
+			case "ArrowLeft":
+				this.boat.velocityRolling.yaw += Math.PI * 0.5 / 180.0;
+				break;
+			case "ArrowRight":
+				this.boat.velocityRolling.yaw -= Math.PI * 0.5 / 180.0;
+				break;
+		}
 	}
 }
 
