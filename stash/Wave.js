@@ -80,7 +80,7 @@ class WaveSimulator {
 		this.collapseButton = document.createElement("div");
 		this.collapseButton.rootInstance = this;
 		this.collapseButton.innerHTML = "collapse";
-		this.collapseButton.id = "collapseButton";
+		this.collapseButton.id = "WaveSimulatorCollapseButton";
 		this.collapseButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.collapseBoat(e); }, false);
 		this.collapseButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.collapseBoat(e); }, false);
 		this.rootWindow.appendChild(this.collapseButton);

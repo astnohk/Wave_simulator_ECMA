@@ -1,4 +1,4 @@
-#Readme {
+#WaveSimulatorReadme {
 	position: absolute;
 	top: 10px;
 	left: 50%;
@@ -13,7 +13,7 @@
 	outline-color: rgb(255, 0, 0);
 }
 
-#Menu {
+#WaveSimulatorMenu {
 	position: absolute;
 	top: 70px;
 	left: 80px;
@@ -27,7 +27,7 @@
 	left: 0px;
 }
 
-#collapseButton {
+#WaveSimulatorCollapseButton {
 	position: absolute;
 	top: 0;
 	right: 0;
