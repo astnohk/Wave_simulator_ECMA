@@ -106,11 +106,11 @@ class WaveSimulator {
 		this.listObjects.push(this.boat);
 
 		// Set view offset
-		this.viewOffset.x = this.braneSize.width * this.interval / 2.0
-		this.viewOffset.y = this.braneSize.height * this.interval / 2.0
+		this.viewOffset.x = this.braneSize.width * this.interval / 2.0;
+		this.viewOffset.y = this.braneSize.height * this.interval / 2.0;
 		// Set display offset
-		this.displayOffset.x = this.canvas.width / 2.0
-		this.displayOffset.y = this.canvas.height / 2.0
+		this.displayOffset.x = this.canvas.width / 2.0;
+		this.displayOffset.y = this.canvas.height / 2.0;
 	}
 
 	prepareCanvas()
@@ -719,8 +719,8 @@ class WaveSimulator {
 				    2.0 * Math.PI * (event.clientY - this.prev_clientY) / this.rotDegree);
 			} else if ((event.buttons & 4) != 0) {
 				let move = {x: 0, y: 0}
-				move.x = event.clientX - this.prev_clientX;
-				move.y = event.clientY - this.prev_clientY;
+				move.x = (event.clientX - this.prev_clientX) / this.scale;
+				move.y = (event.clientY - this.prev_clientY) / this.scale;
 				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
 				this.viewOffset.y -= move.x * this.fieldXYZ.Y.x + move.y * this.fieldXYZ.Y.y;
 				this.viewOffset.z -= move.x * this.fieldXYZ.Z.x + move.y * this.fieldXYZ.Z.y;
@@ -734,8 +734,8 @@ class WaveSimulator {
 				    2.0 * Math.PI * (event.touches[0].clientY - this.prev_clientY) / this.rotDegree);
 			} else if (event.touches.length == 2) {
 				let move = {x: 0, y: 0}
-				move.x = event.touches[0].clientX - this.prev_clientX;
-				move.y = event.touches[0].clientY - this.prev_clientY;
+				move.x = (event.touches[0].clientX - this.prev_clientX) / this.scale;
+				move.y = (event.touches[0].clientY - this.prev_clientY) / this.scale;
 				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
 				this.viewOffset.y -= move.x * this.fieldXYZ.Y.x + move.y * this.fieldXYZ.Y.y;
 				this.viewOffset.z -= move.x * this.fieldXYZ.Z.x + move.y * this.fieldXYZ.Z.y;
