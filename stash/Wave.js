@@ -1,6 +1,8 @@
 // The code written in BSD/KNF indent style
 "use strict";
 
+var Wave_simulator_ECMA_instance = null;
+
 class WaveSimulator {
 	constructor(windowSystemRoot, rootWindow) {
 		this.SysRoot = windowSystemRoot;
@@ -62,6 +64,7 @@ class WaveSimulator {
 // ----- Initialize -----
 	init()
 	{
+		Wave_simulator_ECMA_instance = this;
 		// Make colormap
 		this.makeColormap();
 		this.colormap.current = this.colormap.bluesea;
@@ -76,7 +79,7 @@ class WaveSimulator {
 		// Initialize canvas
 		this.prepareCanvas();
 		// Set event listener
-		this.rootWindow.addEventListener("keydown", function (e) { e.currentTarget.rootInstance.keyDown(e); }, false);
+		window.addEventListener("keydown", function (e) { Wave_simulator_ECMA_instance.keyDown(e); }, false);
 		this.collapseButton = document.createElement("div");
 		this.collapseButton.rootInstance = this;
 		this.collapseButton.innerHTML = "collapse";
@@ -135,6 +138,7 @@ class WaveSimulator {
 		    false);
 		this.canvas.addEventListener("mousedown", function (e) { e.currentTarget.rootInstance.mouseClick(e); }, false);
 		this.canvas.addEventListener("mousemove", function (e) { e.currentTarget.rootInstance.mouseMove(e); }, false);
+		this.canvas.addEventListener("wheel", function (e) { e.currentTarget.rootInstance.wheelMove(e); }, false);
 		this.canvas.addEventListener("touchstart", function (e) { e.currentTarget.rootInstance.mouseClick(e); }, false);
 		this.canvas.addEventListener("touchmove", function (e) { e.currentTarget.rootInstance.mouseMove(e); }, false);
 		this.context = this.canvas.getContext("2d");
@@ -713,11 +717,12 @@ class WaveSimulator {
 	{
 		event.preventDefault();
 		if (event.type === "mousemove") {
-			if ((event.buttons & 1) != 0) {
+			if (event.buttons & 1) {
 				this.rotXYZOnZ(this.fieldXYZ,
 				    2.0 * Math.PI * (event.clientX - this.prev_clientX) / this.rotDegree,
 				    2.0 * Math.PI * (event.clientY - this.prev_clientY) / this.rotDegree);
-			} else if ((event.buttons & 4) != 0) {
+			}
+			if (event.buttons & 4) {
 				let move = {x: 0, y: 0}
 				move.x = (event.clientX - this.prev_clientX) / this.scale;
 				move.y = (event.clientY - this.prev_clientY) / this.scale;
@@ -742,6 +747,15 @@ class WaveSimulator {
 			}
 			this.prev_clientX = event.touches[0].clientX;
 			this.prev_clientY = event.touches[0].clientY;
+		}
+	}
+
+	wheelMove(event)
+	{
+		if (event.deltaY < 0) {
+			this.scale *= 1.1;
+		} else {
+			this.scale /= 1.1;
 		}
 	}
 
